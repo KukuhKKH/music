@@ -3,6 +3,7 @@ package database
 import (
 	"git.dev.siap.id/kukuhkkh/app-music/app/database/schema"
 	"git.dev.siap.id/kukuhkkh/app-music/utils/config"
+	ulog "git.dev.siap.id/kukuhkkh/app-music/utils/logger"
 	"github.com/rs/zerolog"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -31,7 +32,10 @@ func NewDatabase(cfg *config.Config, log zerolog.Logger) *Database {
 
 // ConnectDatabase connect database
 func (_db *Database) ConnectDatabase() {
-	conn, err := gorm.Open(mysql.Open(_db.Cfg.DB.Mysql.DSN), &gorm.Config{})
+	conn, err := gorm.Open(mysql.Open(_db.Cfg.DB.Mysql.DSN), &gorm.Config{
+		Logger: &ulog.GormLogger{Log: _db.Log},
+	})
+
 	if err != nil {
 		_db.Log.Error().Err(err).Msg("An unknown error occurred when to connect the database!")
 	} else {
