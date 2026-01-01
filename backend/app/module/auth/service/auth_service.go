@@ -32,17 +32,18 @@ func (_i *articleService) Login(req request.LoginRequest) (res response.LoginRes
 	// check user by email
 	user, err := _i.userRepo.FindUserByEmail(req.Email)
 	if err != nil {
+		err = errors.New("Email or password is incorrect")
 		return
 	}
 
 	if user == nil {
-		err = errors.New("user not found")
+		err = errors.New("Email or password is incorrect")
 		return
 	}
 
 	// check password
 	if !user.ComparePassword(req.Password) {
-		err = errors.New("password not match")
+		err = errors.New("Email or password is incorrect")
 		return
 	}
 
