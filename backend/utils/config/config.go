@@ -91,11 +91,38 @@ type middleware = struct {
 	}
 }
 
+type storage = struct {
+	Driver string `toml:"driver"`
+
+	Local struct {
+		Path string `toml:"path"`
+	} `toml:"local"`
+
+	Ftp struct {
+		Host      string `toml:"host"`
+		Port      int    `toml:"port"`
+		User      string `toml:"user"`
+		Password  string `toml:"password"`
+		BaseDir   string `toml:"base_dir"`
+		PublicUrl string `toml:"public_url"`
+	} `toml:"ftp"`
+
+	S3 struct {
+		Endpoint  string `toml:"endpoint"`
+		AccessKey string `toml:"access_key"`
+		SecretKey string `toml:"secret_key"`
+		Bucket    string `toml:"bucket"`
+		Region    string `toml:"region"`
+		UseSsl    bool   `toml:"use_ssl"`
+	} `toml:"s3"`
+}
+
 type Config struct {
 	App        app
 	DB         db
 	Logger     logger
 	Middleware middleware
+	Storage    storage
 }
 
 // ParseConfig func to parse config

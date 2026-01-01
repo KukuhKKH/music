@@ -57,3 +57,14 @@ browse = true
 max_age = 3600
 index = "index.html"
 root = "./storage/public"
+
+[storage]
+driver = "s3" # local, ftp, s3
+
+[storage.s3]
+endpoint = "localhost:9000" # URL Minio/S3
+access_key = "YOUR_ACCESS_KEY"
+secret_key = "YOUR_SECRET_KEY"
+bucket = "music-bucket"
+region = "auto"
+use_ssl = false # Set ke true jika menggunakan HTTPS
