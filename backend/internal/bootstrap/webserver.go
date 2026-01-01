@@ -24,6 +24,11 @@ import (
 // NewFiber initialize the webserver
 func NewFiber(cfg *config.Config) *fiber.App {
 	// setup
+	bodyLimit := cfg.App.BodyLimit
+	if bodyLimit <= 0 {
+		bodyLimit = 100 * 1024 * 1024 // Default 100MB
+	}
+
 	app := fiber.New(fiber.Config{
 		ServerHeader:          cfg.App.Name,
 		AppName:               cfg.App.Name,
@@ -31,6 +36,7 @@ func NewFiber(cfg *config.Config) *fiber.App {
 		ErrorHandler:          response.ErrorHandler,
 		IdleTimeout:           cfg.App.IdleTimeout * time.Second,
 		EnablePrintRoutes:     cfg.App.PrintRoutes,
+		BodyLimit:             bodyLimit,
 		DisableStartupMessage: true,
 	})
 

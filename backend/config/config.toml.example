@@ -6,6 +6,7 @@ idle-timeout = 5 # As seconds
 print-routes = false
 prefork = false
 production = false
+body-limit = 104857600 # Ini setara 100MB
 
 [app.tls]
 enable = true

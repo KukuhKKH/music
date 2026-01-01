@@ -21,6 +21,7 @@ type app = struct {
 	PrintRoutes bool          `toml:"print-routes"`
 	Prefork     bool          `toml:"prefork"`
 	Production  bool          `toml:"production"`
+	BodyLimit   int           `toml:"body-limit"`
 	IdleTimeout time.Duration `toml:"idle-timeout"`
 	TLS         struct {
 		Enable   bool   `toml:"enable"`
