@@ -24,6 +24,7 @@ type TrackService interface {
 	GetPaginatedTracks(search string, p *paginator.Pagination) (tracks []response.TrackResponse, pagination *paginator.Pagination, err error)
 	GetTrackByID(id uint64) (track *response.TrackResponse, err error)
 	CreateTrack(req request.CreateTrackRequest, userID uint64, fileHeader *multipart.FileHeader) (track *response.TrackResponse, err error)
+	UpdateTrack(id uint64, req request.UpdateTrackRequest, userID uint64) (track *response.TrackResponse, err error)
 }
 
 func NewTrackService(repo repository.TrackRepository, storage storage.Storage) TrackService {
@@ -84,6 +85,31 @@ func (s *trackService) CreateTrack(req request.CreateTrackRequest, userID uint64
 	}
 
 	res, err := s.repo.CreateTrack(newTrack)
+	if err != nil {
+		return nil, err
+	}
+
+	trackRes := response.FromTrackSchema(*res, s.storage.GetURL(res.StorageFilename))
+	return &trackRes, nil
+}
+
+func (s *trackService) UpdateTrack(id uint64, req request.UpdateTrackRequest, userID uint64) (track *response.TrackResponse, err error) {
+	// Check if track exists and user is owner
+	existingTrack, err := s.repo.FindTrackByID(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if existingTrack.UserID != userID {
+		return nil, fmt.Errorf("you don't have permission to update this track")
+	}
+
+	// Update fields
+	existingTrack.Title = req.Title
+	existingTrack.Artist = req.Artist
+	existingTrack.Album = &req.Album
+
+	res, err := s.repo.UpdateTrack(id, existingTrack)
 	if err != nil {
 		return nil, err
 	}

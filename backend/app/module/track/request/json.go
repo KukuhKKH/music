@@ -11,3 +11,9 @@ type CreateTrackRequest struct {
 	Album    string `form:"album"`
 	Duration int    `form:"duration"`
 }
+
+type UpdateTrackRequest struct {
+	Title  string `json:"title" validate:"required"`
+	Artist string `json:"artist"`
+	Album  string `json:"album"`
+}

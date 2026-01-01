@@ -18,6 +18,7 @@ type TrackController interface {
 	GetTracks(c *fiber.Ctx) error
 	GetTrackByID(c *fiber.Ctx) error
 	Create(c *fiber.Ctx) error
+	Update(c *fiber.Ctx) error
 }
 
 func NewTrackController(trackService service.TrackService) TrackController {
@@ -138,5 +139,41 @@ func (_i *trackController) Create(c *fiber.Ctx) error {
 		Messages: response.Messages{"Create track success"},
 		Data:     res,
 		Code:     fiber.StatusCreated,
+	})
+}
+
+// Update godoc
+// @Summary      Update track metadata
+// @Description  Update track title, artist and album
+// @Tags         Music
+// @Accept       json
+// @Produce      json
+// @Param        id   path uint64 true "Track ID"
+// @Param        body body request.UpdateTrackRequest true "Track Metadata"
+// @Success      200 {object} response.Response
+// @Security     Bearer
+// @Router       /music/{id} [put]
+func (_i *trackController) Update(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return err
+	}
+
+	userToken := c.Locals("user").(*jwt.Token)
+	claims := userToken.Claims.(*middleware.JWTClaims)
+
+	req := new(request.UpdateTrackRequest)
+	if err := c.BodyParser(req); err != nil {
+		return err
+	}
+
+	res, err := _i.trackService.UpdateTrack(uint64(id), *req, claims.UserID)
+	if err != nil {
+		return err
+	}
+
+	return response.Resp(c, response.Response{
+		Messages: response.Messages{"Update track success"},
+		Data:     res,
 	})
 }
