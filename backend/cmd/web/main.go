@@ -5,6 +5,7 @@ import (
 
 	"git.dev.siap.id/kukuhkkh/app-music/app/middleware"
 	"git.dev.siap.id/kukuhkkh/app-music/app/module/auth"
+	"git.dev.siap.id/kukuhkkh/app-music/app/module/dashboard"
 	"git.dev.siap.id/kukuhkkh/app-music/app/module/track"
 	"git.dev.siap.id/kukuhkkh/app-music/app/router"
 	_ "git.dev.siap.id/kukuhkkh/app-music/docs"
@@ -48,6 +49,7 @@ func main() {
 		// provide modules
 		auth.NewAuthModule,
 		track.NewTrackModule,
+		dashboard.NewDashboardModule,
 
 		// start aplication
 		fx.Invoke(bootstrap.Start),

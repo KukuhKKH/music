@@ -2,6 +2,7 @@ package router
 
 import (
 	"git.dev.siap.id/kukuhkkh/app-music/app/module/auth"
+	"git.dev.siap.id/kukuhkkh/app-music/app/module/dashboard"
 	"git.dev.siap.id/kukuhkkh/app-music/app/module/track"
 	"git.dev.siap.id/kukuhkkh/app-music/utils/config"
 	"github.com/gofiber/fiber/v2"
@@ -9,10 +10,11 @@ import (
 )
 
 type Router struct {
-	App         fiber.Router
-	Cfg         *config.Config
-	AuthRouter  *auth.AuthRouter
-	TrackRouter *track.TrackRouter
+	App             fiber.Router
+	Cfg             *config.Config
+	AuthRouter      *auth.AuthRouter
+	TrackRouter     *track.TrackRouter
+	DashboardRouter *dashboard.DashboardRouter
 }
 
 func NewRouter(
@@ -20,12 +22,14 @@ func NewRouter(
 	cfg *config.Config,
 	authRouter *auth.AuthRouter,
 	trackRouter *track.TrackRouter,
+	dashboardRouter *dashboard.DashboardRouter,
 ) *Router {
 	return &Router{
-		App:         fiber,
-		Cfg:         cfg,
-		AuthRouter:  authRouter,
-		TrackRouter: trackRouter,
+		App:             fiber,
+		Cfg:             cfg,
+		AuthRouter:      authRouter,
+		TrackRouter:     trackRouter,
+		DashboardRouter: dashboardRouter,
 	}
 }
 
@@ -42,5 +46,6 @@ func (r *Router) Register() {
 
 	// routes of modules
 	r.AuthRouter.RegisterAuthRoutes()
+	r.DashboardRouter.RegisterDashboardRoutes()
 	r.TrackRouter.RegisterTrackRoutes()
 }
