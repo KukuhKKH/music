@@ -11,7 +11,7 @@ import (
 
 type DashboardRouter struct {
 	App        fiber.Router
-	Controller controller.Controller
+	Controller *controller.Controller
 }
 
 var NewDashboardModule = fx.Options(
@@ -21,7 +21,7 @@ var NewDashboardModule = fx.Options(
 	fx.Provide(NewDashboardRouter),
 )
 
-func NewDashboardRouter(fiber *fiber.App, controller controller.Controller) *DashboardRouter {
+func NewDashboardRouter(fiber *fiber.App, controller *controller.Controller) *DashboardRouter {
 	return &DashboardRouter{
 		App:        fiber,
 		Controller: controller,
