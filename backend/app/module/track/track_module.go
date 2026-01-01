@@ -46,6 +46,7 @@ func (_i *TrackRouter) RegisterTrackRoutes() {
 	// define routes
 	_i.App.Route("/music", func(router fiber.Router) {
 		router.Get("", middleware.Protected(), trackController.GetTracks)
+		router.Get("/:id", middleware.Protected(), trackController.GetTrackByID)
 		router.Post("", middleware.Protected(), trackController.Create)
 	})
 }

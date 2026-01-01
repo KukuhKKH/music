@@ -16,6 +16,7 @@ type trackController struct {
 
 type TrackController interface {
 	GetTracks(c *fiber.Ctx) error
+	GetTrackByID(c *fiber.Ctx) error
 	Create(c *fiber.Ctx) error
 }
 
@@ -49,6 +50,32 @@ func (_i *trackController) GetTracks(c *fiber.Ctx) error {
 		Messages: response.Messages{"Get tracks success"},
 		Data:     tracks,
 		Meta:     paginator.Paging(p),
+	})
+}
+
+// GetTrackByID godoc
+// @Summary      Get track by ID
+// @Description  Get a single track by its ID
+// @Tags         Music
+// @Accept       json
+// @Produce      json
+// @Param        id   path uint64 true "Track ID"
+// @Success      200 {object} response.Response
+// @Router       /music/{id} [get]
+func (_i *trackController) GetTrackByID(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return err
+	}
+
+	res, err := _i.trackService.GetTrackByID(uint64(id))
+	if err != nil {
+		return err
+	}
+
+	return response.Resp(c, response.Response{
+		Messages: response.Messages{"Get track success"},
+		Data:     res,
 	})
 }
 

@@ -22,6 +22,7 @@ type trackService struct {
 
 type TrackService interface {
 	GetPaginatedTracks(search string, p *paginator.Pagination) (tracks []response.TrackResponse, pagination *paginator.Pagination, err error)
+	GetTrackByID(id uint64) (track *response.TrackResponse, err error)
 	CreateTrack(req request.CreateTrackRequest, userID uint64, fileHeader *multipart.FileHeader) (track *response.TrackResponse, err error)
 }
 
@@ -32,9 +33,6 @@ func NewTrackService(repo repository.TrackRepository, storage storage.Storage) T
 	}
 }
 
-func (s *trackService) GetPaginatedTracks(search string, p *paginator.Pagination) (tracks []schema.Track, pagination *paginator.Pagination, err error) {
-	return s.repo.PaginateTracks(search, p)
-}
 func (s *trackService) GetPaginatedTracks(search string, p *paginator.Pagination) (tracks []response.TrackResponse, pagination *paginator.Pagination, err error) {
 	schemaTracks, p, err := s.repo.PaginateTracks(search, p)
 	if err != nil {
@@ -44,8 +42,16 @@ func (s *trackService) GetPaginatedTracks(search string, p *paginator.Pagination
 	return response.FromTrackListSchema(schemaTracks, s.storage), p, nil
 }
 
+func (s *trackService) GetTrackByID(id uint64) (track *response.TrackResponse, err error) {
+	schemaTrack, err := s.repo.FindTrackByID(id)
+	if err != nil {
+		return nil, err
+	}
 
-func (s *trackService) CreateTrack(req request.CreateTrackRequest, userID uint64, fileHeader *multipart.FileHeader) (track *schema.Track, err error) {
+	res := response.FromTrackSchema(*schemaTrack, s.storage.GetURL(schemaTrack.StorageFilename))
+	return &res, nil
+}
+
 func (s *trackService) CreateTrack(req request.CreateTrackRequest, userID uint64, fileHeader *multipart.FileHeader) (track *response.TrackResponse, err error) {
 	file, err := fileHeader.Open()
 	if err != nil {
