@@ -25,6 +25,7 @@ type TrackService interface {
 	GetTrackByID(id uint64) (track *response.TrackResponse, err error)
 	CreateTrack(req request.CreateTrackRequest, userID uint64, fileHeader *multipart.FileHeader) (track *response.TrackResponse, err error)
 	UpdateTrack(id uint64, req request.UpdateTrackRequest, userID uint64) (track *response.TrackResponse, err error)
+	DeleteTrack(id uint64, userID uint64) (err error)
 }
 
 func NewTrackService(repo repository.TrackRepository, storage storage.Storage) TrackService {
@@ -116,4 +117,26 @@ func (s *trackService) UpdateTrack(id uint64, req request.UpdateTrackRequest, us
 
 	trackRes := response.FromTrackSchema(*res, s.storage.GetURL(res.StorageFilename))
 	return &trackRes, nil
+}
+
+func (s *trackService) DeleteTrack(id uint64, userID uint64) (err error) {
+	// Check if track exists and user is owner
+	existingTrack, err := s.repo.FindTrackByID(id)
+	if err != nil {
+		return err
+	}
+
+	if existingTrack.UserID != userID {
+		return fmt.Errorf("you don't have permission to delete this track")
+	}
+
+	// Delete file from storage
+	err = s.storage.Delete(existingTrack.StorageFilename)
+	if err != nil {
+		// Log the error but continue to delete the DB record if the file is already gone
+		fmt.Printf("Warning: failed to delete file from storage: %v\n", err)
+	}
+
+	// Delete DB Record
+	return s.repo.DeleteTrack(id)
 }

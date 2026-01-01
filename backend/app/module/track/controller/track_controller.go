@@ -19,6 +19,7 @@ type TrackController interface {
 	GetTrackByID(c *fiber.Ctx) error
 	Create(c *fiber.Ctx) error
 	Update(c *fiber.Ctx) error
+	Delete(c *fiber.Ctx) error
 }
 
 func NewTrackController(trackService service.TrackService) TrackController {
@@ -175,5 +176,34 @@ func (_i *trackController) Update(c *fiber.Ctx) error {
 	return response.Resp(c, response.Response{
 		Messages: response.Messages{"Update track success"},
 		Data:     res,
+	})
+}
+
+// Delete godoc
+// @Summary      Delete track
+// @Description  Delete track metadata and file from storage
+// @Tags         Music
+// @Accept       json
+// @Produce      json
+// @Param        id   path uint64 true "Track ID"
+// @Success      200 {object} response.Response
+// @Security     Bearer
+// @Router       /music/{id} [delete]
+func (_i *trackController) Delete(c *fiber.Ctx) error {
+	id, err := c.ParamsInt("id")
+	if err != nil {
+		return err
+	}
+
+	userToken := c.Locals("user").(*jwt.Token)
+	claims := userToken.Claims.(*middleware.JWTClaims)
+
+	err = _i.trackService.DeleteTrack(uint64(id), claims.UserID)
+	if err != nil {
+		return err
+	}
+
+	return response.Resp(c, response.Response{
+		Messages: response.Messages{"Delete track success"},
 	})
 }

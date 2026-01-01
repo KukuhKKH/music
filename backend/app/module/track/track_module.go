@@ -48,6 +48,7 @@ func (_i *TrackRouter) RegisterTrackRoutes() {
 		router.Get("", middleware.Protected(), trackController.GetTracks)
 		router.Get("/:id", middleware.Protected(), trackController.GetTrackByID)
 		router.Put("/:id", middleware.Protected(), trackController.Update)
+		router.Delete("/:id", middleware.Protected(), trackController.Delete)
 		router.Post("", middleware.Protected(), trackController.Create)
 	})
 }
