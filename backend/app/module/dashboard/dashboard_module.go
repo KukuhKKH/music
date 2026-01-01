@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"git.dev.siap.id/kukuhkkh/app-music/app/middleware"
 	"git.dev.siap.id/kukuhkkh/app-music/app/module/dashboard/controller"
 	"git.dev.siap.id/kukuhkkh/app-music/app/module/dashboard/repository"
 	"git.dev.siap.id/kukuhkkh/app-music/app/module/dashboard/service"
@@ -16,7 +17,7 @@ type DashboardRouter struct {
 var NewDashboardModule = fx.Options(
 	fx.Provide(repository.NewDashboardRepository),
 	fx.Provide(service.NewDashboardService),
-	fx.Provide(controller.NewDashboardController),
+	fx.Provide(controller.NewController),
 	fx.Provide(NewDashboardRouter),
 )
 
@@ -31,5 +32,5 @@ func (_i *DashboardRouter) RegisterDashboardRoutes() {
 	// define controllers
 	dashboardController := _i.Controller.Dashboard
 
-	_i.App.Get("/stats/summary", dashboardController.GetSummary)
+	_i.App.Get("/stats/summary", middleware.Protected(), dashboardController.GetSummary)
 }
