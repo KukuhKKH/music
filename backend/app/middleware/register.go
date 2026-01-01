@@ -68,4 +68,9 @@ func (m *Middleware) Register() {
 	m.App.Get(m.Cfg.Middleware.Monitor.Path, monitor.New(monitor.Config{
 		Next: utils.IsEnabled(m.Cfg.Middleware.Monitor.Enable),
 	}))
+
+	// Static Storage for Local Driver
+	if m.Cfg.Storage.Driver == "local" {
+		m.App.Static("/storage", m.Cfg.Storage.Local.Path)
+	}
 }
