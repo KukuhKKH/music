@@ -1,0 +1,69 @@
+<script setup lang="ts">
+import { ConfigProvider } from "reka-ui";
+import { Toaster } from "@/components/ui/sonner";
+import "vue-sonner/style.css";
+
+const colorMode = useColorMode();
+const color = computed(() =>
+  colorMode.value === "dark" ? "#09090b" : "#ffffff"
+);
+const { theme } = useAppSettings();
+const { fetchUser } = useAuth();
+const dir = ref("ltr");
+
+onMounted(() => {
+  fetchUser();
+});
+
+useHead({
+  meta: [
+    { charset: "utf-8" },
+    { name: "viewport", content: "width=device-width, initial-scale=1" },
+    { key: "theme-color", name: "theme-color", content: color },
+  ],
+  link: [{ rel: "icon", href: "/favicon.ico" }],
+  htmlAttrs: {
+    lang: "en",
+  },
+  bodyAttrs: {
+    class: computed(
+      () =>
+        `color-${theme.value?.color || "default"} theme-${
+          theme.value?.type || "default"
+        }`
+    ),
+  },
+});
+
+const title = "Music";
+const description = "Music App";
+
+useSeoMeta({
+  title,
+  description,
+  ogTitle: title,
+  ogDescription: description,
+  ogUrl: "https://banglipai.tech",
+  ogImage: "https://banglipai.tech",
+});
+</script>
+
+<template>
+  <Body class="overscroll-none antialiased bg-background text-foreground">
+    <ConfigProvider :dir="dir">
+      <div id="app" vaul-drawer-wrapper class="relative">
+        <NuxtLayout>
+          <NuxtPage />
+        </NuxtLayout>
+
+        <AppSettings />
+      </div>
+
+      <Toaster
+        :theme="colorMode.preference as any || 'system'"
+        position="top-right"
+        rich-colors
+      />
+    </ConfigProvider>
+  </Body>
+</template>
