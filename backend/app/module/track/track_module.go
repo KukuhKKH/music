@@ -5,6 +5,7 @@ import (
 	"git.dev.siap.id/kukuhkkh/app-music/app/module/track/controller"
 	"git.dev.siap.id/kukuhkkh/app-music/app/module/track/repository"
 	"git.dev.siap.id/kukuhkkh/app-music/app/module/track/service"
+	"git.dev.siap.id/kukuhkkh/app-music/utils/storage"
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/fx"
 )
@@ -26,6 +27,9 @@ var NewTrackModule = fx.Options(
 
 	// register router of track module
 	fx.Provide(NewTrackRouter),
+
+	// register storage
+	fx.Provide(storage.NewStorage),
 )
 
 func NewTrackRouter(fiber *fiber.App, controller *controller.Controller) *TrackRouter {
@@ -42,5 +46,6 @@ func (_i *TrackRouter) RegisterTrackRoutes() {
 	// define routes
 	_i.App.Route("/music", func(router fiber.Router) {
 		router.Get("", middleware.Protected(), trackController.GetTracks)
+		router.Post("", middleware.Protected(), trackController.Create)
 	})
 }

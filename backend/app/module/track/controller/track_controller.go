@@ -1,10 +1,13 @@
 package controller
 
 import (
+	"git.dev.siap.id/kukuhkkh/app-music/app/middleware"
+	"git.dev.siap.id/kukuhkkh/app-music/app/module/track/request"
 	"git.dev.siap.id/kukuhkkh/app-music/app/module/track/service"
 	"git.dev.siap.id/kukuhkkh/app-music/utils/paginator"
 	"git.dev.siap.id/kukuhkkh/app-music/utils/response"
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 type trackController struct {
@@ -13,6 +16,7 @@ type trackController struct {
 
 type TrackController interface {
 	GetTracks(c *fiber.Ctx) error
+	Create(c *fiber.Ctx) error
 }
 
 func NewTrackController(trackService service.TrackService) TrackController {
@@ -45,5 +49,67 @@ func (_i *trackController) GetTracks(c *fiber.Ctx) error {
 		Messages: response.Messages{"Get tracks success"},
 		Data:     tracks,
 		Meta:     paginator.Paging(p),
+	})
+}
+
+// Create godoc
+// @Summary      Upload new track
+// @Description  Upload new track with metadata and file
+// @Tags         Music
+// @Accept       multipart/form-data
+// @Produce      json
+// @Param        title    formData string true  "Track Title"
+// @Param        artist   formData string false "Artist Name"
+// @Param        album    formData string false "Album Name"
+// @Param        duration formData int    false "Duration in seconds"
+// @Param        file     formData file   true  "Audio File"
+// @Success      201 {object} response.Response
+// @Security     Bearer
+// @Router       /music [post]
+func (_i *trackController) Create(c *fiber.Ctx) error {
+	userToken := c.Locals("user").(*jwt.Token)
+	claims := userToken.Claims.(*middleware.JWTClaims)
+
+	req := new(request.CreateTrackRequest)
+	if err := c.BodyParser(req); err != nil {
+		return err
+	}
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		return err
+	}
+
+	// Validate file type
+	allowedMimeTypes := map[string]bool{
+		"audio/mpeg":   true,
+		"audio/wav":    true,
+		"audio/ogg":    true,
+		"audio/flac":   true,
+		"audio/x-m4a":  true,
+		"audio/mp4":    true,
+		"audio/aac":    true,
+		"audio/midi":   true,
+		"audio/x-midi": true,
+		"audio/webm":   true,
+	}
+
+	contentType := file.Header.Get("Content-Type")
+	if !allowedMimeTypes[contentType] {
+		return &response.Error{
+			Code:    fiber.StatusBadRequest,
+			Message: "File type not allowed. Only audio files are permitted.",
+		}
+	}
+
+	res, err := _i.trackService.CreateTrack(*req, claims.UserID, file)
+	if err != nil {
+		return err
+	}
+
+	return response.Resp(c, response.Response{
+		Messages: response.Messages{"Create track success"},
+		Data:     res,
+		Code:     fiber.StatusCreated,
 	})
 }
