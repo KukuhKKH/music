@@ -11,7 +11,7 @@ import (
 )
 
 // AuthService
-type articleService struct {
+type userService struct {
 	userRepo user_repo.UserRepository
 }
 
@@ -23,12 +23,12 @@ type AuthService interface {
 
 // init AuthService
 func NewAuthService(userRepo user_repo.UserRepository) AuthService {
-	return &articleService{
+	return &userService{
 		userRepo: userRepo,
 	}
 }
 
-func (_i *articleService) Login(req request.LoginRequest) (res response.LoginResponse, err error) {
+func (_i *userService) Login(req request.LoginRequest) (res response.LoginResponse, err error) {
 	// check user by email
 	user, err := _i.userRepo.FindUserByEmail(req.Email)
 	if err != nil {
@@ -60,7 +60,7 @@ func (_i *articleService) Login(req request.LoginRequest) (res response.LoginRes
 	return
 }
 
-func (_i *articleService) Register(req request.RegisterRequest) (res response.RegisterResponse, err error) {
+func (_i *userService) Register(req request.RegisterRequest) (res response.RegisterResponse, err error) {
 	// check user by email
 	user, err := _i.userRepo.FindUserByEmail(req.Email)
 	if err != nil {
@@ -89,7 +89,7 @@ func (_i *articleService) Register(req request.RegisterRequest) (res response.Re
 	return
 }
 
-func (_i *articleService) Me(userID uint64) (res response.UserResponse, err error) {
+func (_i *userService) Me(userID uint64) (res response.UserResponse, err error) {
 	// check user by id
 	user, err := _i.userRepo.FindUserByID(userID)
 	if err != nil {
