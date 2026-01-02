@@ -1,4 +1,15 @@
 definitions:
+  request.UpdateTrackRequest:
+    properties:
+      album:
+        type: string
+      artist:
+        type: string
+      title:
+        type: string
+    required:
+    - title
+    type: object
   response.Response:
     properties:
       code:
@@ -131,6 +142,134 @@ paths:
       summary: Get paginated tracks
       tags:
       - Music
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload new track with metadata and file
+      parameters:
+      - description: Track Title
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Artist Name
+        in: formData
+        name: artist
+        type: string
+      - description: Album Name
+        in: formData
+        name: album
+        type: string
+      - description: Duration in seconds
+        in: formData
+        name: duration
+        type: integer
+      - description: Audio File
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - Bearer: []
+      summary: Upload new track
+      tags:
+      - Music
+  /music/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete track metadata and file from storage
+      parameters:
+      - description: Track ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - Bearer: []
+      summary: Delete track
+      tags:
+      - Music
+    get:
+      consumes:
+      - application/json
+      description: Get a single track by its ID
+      parameters:
+      - description: Track ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Get track by ID
+      tags:
+      - Music
+    put:
+      consumes:
+      - application/json
+      description: Update track title, artist and album
+      parameters:
+      - description: Track ID
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Track Metadata
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateTrackRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      security:
+      - Bearer: []
+      summary: Update track metadata
+      tags:
+      - Music
+  /stats/summary:
+    get:
+      consumes:
+      - application/json
+      description: Get total songs, total size and last upload time
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Get dashboard summary
+      tags:
+      - Stats
 schemes:
 - http
 - https
