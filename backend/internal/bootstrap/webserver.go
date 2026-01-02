@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"runtime"
 	"strings"
@@ -50,101 +51,93 @@ func NewFiber(cfg *config.Config) *fiber.App {
 func Start(
 	lifecycle fx.Lifecycle,
 	cfg *config.Config,
-	fiber *fiber.App,
+	fiberApp *fiber.App,
 	router *router.Router,
 	middlewares *middleware.Middleware,
-	database *database.Database,
+	db *database.Database,
 	log zerolog.Logger,
 ) {
 	lifecycle.Append(
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
-				// Register middlewares & routes
+				// ---------------------------------------------------------
+				// 1. Register Middlewares & Routes
+				// ---------------------------------------------------------
 				middlewares.Register()
 				router.Register()
 
-				// Custom Startup Messages
+				// ---------------------------------------------------------
+				// 2. Prepare Host & Port Info
+				// ---------------------------------------------------------
 				host, port := config.ParseAddress(cfg.App.Port)
 				if host == "" {
-					if fiber.Config().Network == "tcp6" {
+					if fiberApp.Config().Network == "tcp6" {
 						host = "[::1]"
 					} else {
 						host = "0.0.0.0"
 					}
 				}
 
-				// ASCII Art
-				ascii, err := os.ReadFile("./storage/ascii_art.txt")
-				if err != nil {
-					log.Debug().Err(err).Msg("An unknown error occurred when to print ASCII art!")
+				// Gabungkan host dan port agar aman untuk Listen
+				// Jika port hanya berisi angka (misal "8080"), tambahkan ":" di depan
+				addr := cfg.App.Port
+				if !strings.Contains(addr, ":") {
+					addr = fmt.Sprintf(":%s", addr)
 				}
 
-				for _, line := range strings.Split(futils.UnsafeString(ascii), "\n") {
-					log.Info().Msg(line)
-				}
+				// ---------------------------------------------------------
+				// 3. Print Startup Messages (ASCII & Info)
+				// ---------------------------------------------------------
+				printStartupMessage(cfg, fiberApp, log, host, port)
 
-				// Information message
-				log.Info().Msg(fiber.Config().AppName + " is running at the moment!")
-
-				// Debug information
-				if !cfg.App.Production {
-					prefork := "Enabled"
-					procs := runtime.GOMAXPROCS(0)
-					if !cfg.App.Prefork {
-						procs = 1
-						prefork = "Disabled"
-					}
-
-					log.Debug().Msgf("Version: %s", "-")
-					log.Debug().Msgf("Host: %s", host)
-					log.Debug().Msgf("Port: %s", port)
-					log.Debug().Msgf("Prefork: %s", prefork)
-					log.Debug().Msgf("Handlers: %d", fiber.HandlersCount())
-					log.Debug().Msgf("Processes: %d", procs)
-					log.Debug().Msgf("PID: %d", os.Getpid())
-				}
-
-				// Listen the app (with TLS Support)
-				if cfg.App.TLS.Enable {
-					log.Debug().Msg("TLS support was enabled.")
-
-					if err := fiber.ListenTLS(cfg.App.Port, cfg.App.TLS.CertFile, cfg.App.TLS.KeyFile); err != nil {
-						log.Error().Err(err).Msg("An unknown error occurred when to run server!")
-					}
-				}
-
+				// ---------------------------------------------------------
+				// 4. Start Server (NON-BLOCKING / Goroutine)
+				// ---------------------------------------------------------
 				go func() {
-					if err := fiber.Listen(cfg.App.Port); err != nil {
-						log.Error().Err(err).Msg("An unknown error occurred when to run server!")
+					var err error
+
+					// Cek apakah TLS di-enable
+					if cfg.App.TLS.Enable {
+						log.Info().Msg("🔒 TLS support was enabled.")
+						err = fiberApp.ListenTLS(addr, cfg.App.TLS.CertFile, cfg.App.TLS.KeyFile)
+					} else {
+						err = fiberApp.Listen(addr)
+					}
+
+					if err != nil {
+						log.Error().Err(err).Msg("❌ An unknown error occurred when to run server!")
 					}
 				}()
 
-				database.ConnectDatabase()
+				// ---------------------------------------------------------
+				// 5. Database Connection & Operations
+				// ---------------------------------------------------------
+				db.ConnectDatabase()
 
-				migrate := flag.Bool("migrate", false, "migrate the database")
-				seeder := flag.Bool("seed", false, "seed the database")
-				flag.Parse()
-
-				// read flag -migrate to migrate the database
-				if *migrate {
-					database.MigrateModels()
-				}
-				// read flag -seed to seed the database
-				if *seeder {
-					database.SeedModels(seeds.NewUserSeeder(database.DB))
+				if hasFlag("migrate") {
+					log.Info().Msg("🛠️  Migrate flag detected. Running migration...")
+					db.MigrateModels()
 				}
 
+				if hasFlag("seed") {
+					log.Info().Msg("🌱 Seed flag detected. Running seeder...")
+					db.SeedModels(seeds.NewUserSeeder(db.DB))
+				}
+
+				// Return nil agar FX tahu aplikasi berhasil start
 				return nil
 			},
 			OnStop: func(ctx context.Context) error {
-				log.Info().Msg("Shutting down the app...")
-				if err := fiber.Shutdown(); err != nil {
-					log.Panic().Err(err).Msg("")
+				log.Info().Msg("🛑 Shutting down the app...")
+
+				if err := fiberApp.ShutdownWithContext(ctx); err != nil {
+					log.Panic().Err(err).Msg("Fiber shutdown failed")
 				}
 
 				log.Info().Msg("Running cleanup tasks...")
 				log.Info().Msg("1- Shutdown the database")
-				database.ShutdownDatabase()
+				db.ShutdownDatabase()
+
 				log.Info().Msgf("%s was successful shutdown.", cfg.App.Name)
 				log.Info().Msg("\u001b[96msee you again👋\u001b[0m")
 
@@ -152,4 +145,61 @@ func Start(
 			},
 		},
 	)
+}
+
+// ---------------------------------------------------------
+// Helper Functions
+// ---------------------------------------------------------
+
+// hasFlag
+func hasFlag(name string) bool {
+	for _, arg := range os.Args {
+		if arg == "-"+name || arg == "--"+name {
+			return true
+		}
+	}
+
+	if f := flag.Lookup(name); f != nil {
+		return f.Value.String() == "true"
+	}
+
+	return false
+}
+
+func printStartupMessage(cfg *config.Config, fiberApp *fiber.App, log zerolog.Logger, host, port string) {
+	// ASCII Art
+	if !fiber.IsChild() {
+		ascii, err := os.ReadFile("./storage/ascii_art.txt")
+		if err != nil {
+			log.Debug().Err(err).Msg("An unknown error occurred when to print ASCII art!")
+		} else {
+			for _, line := range strings.Split(futils.UnsafeString(ascii), "\n") {
+				// Menggunakan fmt.Println agar format ASCII terjaga rapi
+				fmt.Println(line)
+			}
+		}
+	}
+
+	// Information message
+	log.Info().Msg(fiberApp.Config().AppName + " is running at the moment!")
+
+	// Debug information
+	if !cfg.App.Production {
+		prefork := "Enabled"
+		procs := runtime.GOMAXPROCS(0)
+		if !cfg.App.Prefork {
+			procs = 1
+			prefork = "Disabled"
+		}
+
+		log.Debug().Msg("--------------------------------------------------")
+		log.Debug().Msgf("Version: %s", "-")
+		log.Debug().Msgf("Host: %s", host)
+		log.Debug().Msgf("Port: %s", port)
+		log.Debug().Msgf("Prefork: %s", prefork)
+		log.Debug().Msgf("Handlers: %d", fiberApp.HandlersCount())
+		log.Debug().Msgf("Procs:    %d", procs)
+		log.Debug().Msgf("PID: %d", os.Getpid())
+		log.Debug().Msg("--------------------------------------------------")
+	}
 }
