@@ -41,8 +41,5 @@ definePageMeta({
         <MusicList />
       </CardContent>
     </Card>
-
-    <!-- Global Floating Mini Player -->
-    <MusicMiniPlayer />
   </div>
 </template>

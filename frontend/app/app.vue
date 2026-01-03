@@ -49,6 +49,9 @@ useSeoMeta({
       <div id="app" vaul-drawer-wrapper class="relative">
         <NuxtLayout>
           <NuxtPage />
+
+          <!-- Global Floating Mini Player -->
+          <MusicMiniPlayer />
         </NuxtLayout>
 
         <AppSettings />
