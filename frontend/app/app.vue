@@ -8,12 +8,7 @@ const color = computed(() =>
   colorMode.value === "dark" ? "#09090b" : "#ffffff"
 );
 const { theme } = useAppSettings();
-const { fetchUser } = useAuth();
 const dir = ref("ltr");
-
-onMounted(() => {
-  fetchUser();
-});
 
 useHead({
   meta: [

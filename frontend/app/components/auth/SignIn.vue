@@ -23,7 +23,11 @@ const onSubmit = form.handleSubmit(async (values) => {
   isLoading.value = true;
 
   try {
-    await login(values.email, values.password);
+    await login({
+      email: values.email,
+      password: values.password,
+    });
+
     toast.success("Login success");
     navigateTo("/");
   } catch (error: any) {
