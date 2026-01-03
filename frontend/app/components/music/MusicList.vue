@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useDebounceFn } from "@vueuse/core";
-import { Music, Search, Trash2 } from "lucide-vue-next";
+import { Music, Search, Trash2, X, AlertTriangle } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 import type { MusicMeta, MusicResponse, Track } from "~/types/music";
 
@@ -11,7 +11,10 @@ const meta = ref<MusicMeta | null>(null);
 const isLoading = ref(false);
 const searchQuery = ref("");
 const currentPage = ref(1);
-const selectedIds = ref<Set<number>>(new Set());
+
+// Selection state
+const selectedIds = ref<number[]>([]);
+const selectedCount = computed(() => selectedIds.value.length);
 
 async function fetchTracks() {
   isLoading.value = true;
@@ -26,11 +29,11 @@ async function fetchTracks() {
         },
       }
     );
-    
+
     if (response) {
       tracks.value = response.data || [];
       meta.value = response.meta || null;
-      selectedIds.value.clear();
+      selectedIds.value = [];
     }
   } catch (err) {
     console.error("Fetch tracks error:", err);
@@ -53,69 +56,74 @@ watch(currentPage, fetchTracks);
 onMounted(fetchTracks);
 
 function toggleSelectAll() {
-  const allCurrentOnPageSelected = tracks.value.every((t) =>
-    selectedIds.value.has(t.id)
-  );
-  const newSelected = new Set(selectedIds.value);
+  const allOnPage = tracks.value.map((t) => t.id);
+  const allCurrentSelected =
+    allOnPage.length > 0 &&
+    allOnPage.every((id) => selectedIds.value.includes(id));
 
-  if (allCurrentOnPageSelected) {
-    tracks.value.forEach((t) => newSelected.delete(t.id));
+  if (allCurrentSelected) {
+    selectedIds.value = selectedIds.value.filter(
+      (id) => !allOnPage.includes(id)
+    );
   } else {
-    tracks.value.forEach((t) => newSelected.add(t.id));
+    const newSelection = [...selectedIds.value];
+    allOnPage.forEach((id) => {
+      if (!newSelection.includes(id)) newSelection.push(id);
+    });
+    selectedIds.value = newSelection;
   }
-  selectedIds.value = newSelected;
 }
 
 function toggleSelect(id: number) {
-  const newSelected = new Set(selectedIds.value);
-  if (newSelected.has(id)) {
-    newSelected.delete(id);
+  const index = selectedIds.value.indexOf(id);
+  if (index > -1) {
+    selectedIds.value = selectedIds.value.filter((i) => i !== id);
   } else {
-    newSelected.add(id);
-  }
-  selectedIds.value = newSelected;
-}
-
-async function deleteTrack(id: number) {
-  try {
-    await $fetch(`${config.public.apiBase}/music/${id}`, { method: "DELETE" });
-    tracks.value = tracks.value.filter((t) => t.id !== id);
-    toast.success("Track deleted");
-    if (tracks.value.length === 0 && currentPage.value > 1) {
-      currentPage.value--;
-    }
-    fetchTracks();
-  } catch (err) {
-    console.error("Delete error:", err);
-    toast.error("Failed to delete track");
+    selectedIds.value = [...selectedIds.value, id];
   }
 }
 
 async function bulkDelete() {
-  const ids = Array.from(selectedIds.value);
+  const ids = [...selectedIds.value];
   if (ids.length === 0) return;
+
   isLoading.value = true;
+  const count = ids.length;
+
   try {
     for (const id of ids) {
       await $fetch(`${config.public.apiBase}/music/${id}`, {
         method: "DELETE",
       });
     }
-    toast.success(`${ids.length} tracks deleted`);
-    selectedIds.value.clear();
+    toast.success(`${count} tracks deleted`);
+    selectedIds.value = [];
     fetchTracks();
   } catch (err) {
     console.error("Bulk delete error:", err);
-    toast.error("Failed to perform bulk delete");
+    toast.error("Partial deletion occurred");
+    fetchTracks();
   } finally {
     isLoading.value = false;
+  }
+}
+
+async function deleteTrack(id: number) {
+  try {
+    await $fetch(`${config.public.apiBase}/music/${id}`, { method: "DELETE" });
+    tracks.value = tracks.value.filter((t) => t.id !== id);
+    selectedIds.value = selectedIds.value.filter((i) => i !== id);
+    toast.success("Track deleted");
+    fetchTracks();
+  } catch (err) {
+    toast.error("Failed to delete track");
   }
 }
 </script>
 
 <template>
   <Card class="border-primary/10 shadow-sm overflow-hidden">
-    <!-- Card Header with Search & Actions -->
+    <!-- Card Header -->
     <CardHeader class="border-b bg-muted/30 pb-4">
       <div
         class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
@@ -125,14 +133,11 @@ async function bulkDelete() {
             <Music class="h-5 w-5" />
           </div>
           <div>
-            <CardTitle class="text-xl"> Tracks </CardTitle>
-            <CardDescription>
-              A complete list of your uploaded audio files.
-            </CardDescription>
+            <CardTitle class="text-xl">Tracks</CardTitle>
+            <CardDescription>Library Management</CardDescription>
           </div>
         </div>
 
-        <!-- Search Bar in Header -->
         <div class="relative w-full max-w-[280px]">
           <Search
             class="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"
@@ -140,39 +145,41 @@ async function bulkDelete() {
           <Input
             v-model="searchQuery"
             type="search"
-            placeholder="Quick search..."
+            placeholder="Search tracks..."
             class="pl-9 bg-background/50 border-none shadow-none h-8 text-xs focus-visible:ring-1"
           />
         </div>
       </div>
     </CardHeader>
 
-    <!-- Bulk Actions Bar -->
+    <!-- NEW BULK ACTION BAR - Simplified logic for testing -->
     <div
-      v-if="selectedIds.size > 0"
-      class="bg-primary/5 border-b px-4 py-2 flex items-center justify-between animate-in fade-in slide-in-from-top-2"
+      v-if="selectedCount > 0"
+      class="bg-black text-white px-4 py-3 flex items-center justify-between border-y border-white/10"
+      style="background: #1e40af !important; color: white !important"
     >
-      <span class="text-xs font-bold text-primary italic">
-        {{ selectedIds.size }} items selected for action
-      </span>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-3">
+        <Trash2 class="h-4 w-4" />
+        <span class="text-xs font-bold uppercase tracking-widest">
+          {{ selectedCount }} Items Selected
+        </span>
+      </div>
+      <div class="flex items-center gap-3">
         <AlertDialog>
           <AlertDialogTrigger as-child>
             <Button
-              variant="destructive"
               size="sm"
-              class="h-7 text-[10px] font-bold uppercase tracking-wider px-3"
+              variant="secondary"
+              class="bg-white text-blue-800 hover:bg-white/90 h-7"
             >
-              <Trash2 class="mr-1.5 h-3 w-3" />
-              Exec Delete
+              Delete All Selected
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Action Confirmation</AlertDialogTitle>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete these
-                {{ selectedIds.size }} tracks?
+                Delete {{ selectedCount }} selected tracks permanently?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -186,10 +193,16 @@ async function bulkDelete() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <button
+          class="text-white/60 hover:text-white"
+          @click="selectedIds = []"
+        >
+          <X class="h-4 w-4" />
+        </button>
       </div>
     </div>
 
-    <!-- Table Body -->
+    <!-- Table -->
     <CardContent class="p-0">
       <MusicTrackTable
         :search-query="searchQuery"
