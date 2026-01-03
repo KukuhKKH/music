@@ -11,10 +11,12 @@ export interface Track {
 }
 
 export interface MusicMeta {
-  current_page: number
-  last_page: number
-  per_page: number
-  total: number
+  limit: number
+  page: number
+  next_page: number
+  previous_page: number
+  count: number
+  total_page: number
 }
 
 export interface MusicResponse {

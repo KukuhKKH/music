@@ -335,13 +335,13 @@ async function saveTitle(track: Track) {
 
     <!-- Pagination -->
     <div
-      v-if="meta && meta.last_page > 1"
+      v-if="meta && meta.total_page > 1"
       class="flex flex-col gap-4 items-center justify-between p-4 md:flex-row border-t bg-muted/5"
     >
       <div
         class="text-[10px] text-muted-foreground uppercase tracking-widest font-bold"
       >
-        Found <span class="text-foreground">{{ meta.total }}</span> items
+        Found <span class="text-foreground">{{ meta.count }}</span> items
       </div>
       <div class="flex items-center gap-1">
         <Button
@@ -355,7 +355,7 @@ async function saveTitle(track: Track) {
         </Button>
         <div class="flex items-center gap-0.5">
           <Button
-            v-for="p in meta.last_page"
+            v-for="p in meta.total_page"
             :key="p"
             size="sm"
             variant="ghost"
@@ -374,7 +374,7 @@ async function saveTitle(track: Track) {
           variant="ghost"
           size="sm"
           class="h-8 w-8 p-0"
-          :disabled="currentPage === meta.last_page"
+          :disabled="currentPage === meta.total_page"
           @click="emit('update:currentPage', currentPage + 1)"
         >
           <ChevronRight class="h-4 w-4" />
