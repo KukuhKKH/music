@@ -2,29 +2,22 @@ import { defineStore } from 'pinia'
 
 export const useAuthStore = defineStore('auth', () => {
   const config = useRuntimeConfig()
-  const token = useCookie('auth_token')
   const user = ref<any>(null)
   const isLoading = ref(false)
 
+  // fetchUser will now rely on the HttpOnly cookie handled by the browser/proxy
   const fetchUser = async () => {
-    if (!token.value) {
-      user.value = null
-      return
-    }
-
     isLoading.value = true
     try {
       const { data, error } = await useFetch<any>(`${config.public.apiBase}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token.value}`,
-        },
+        // useFetch automatically includes cookies if same-origin (proxied)
+        // No manual headers needed for token
       })
 
       if (error.value) {
+        user.value = null
         if (error.value.statusCode === 401) {
-          token.value = null
-          user.value = null
-          navigateTo('/login')
+          // If we are on a protected route, middleware will handle redirect
         }
         return
       }
@@ -33,11 +26,12 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = data.value.data
       }
     }
+
     catch (err) {
       console.error('Failed to fetch user:', err)
       user.value = null
-      token.value = null
     }
+
     finally {
       isLoading.value = false
     }
@@ -70,23 +64,27 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     if (data.value && data.value.data) {
-      token.value = data.value.data.token
       await fetchUser()
       return data.value.data
     }
   }
 
-  const logout = () => {
-    token.value = null
+  const logout = async () => {
+    try {
+      await useFetch(`${config.public.apiBase}/auth/logout`, { method: 'POST' })
+    }
+    catch {
+      // ignored
+    }
+
     user.value = null
     navigateTo('/login')
   }
 
-  const isLoggedIn = computed(() => !!token.value && !!user.value)
+  const isLoggedIn = computed(() => !!user.value)
 
   return {
     user,
-    token,
     isLoading,
     isLoggedIn,
     fetchUser,
