@@ -20,6 +20,7 @@ func Protected() fiber.Handler {
 		SigningKey:   []byte(conf.Middleware.Jwt.Secret),
 		ErrorHandler: jwtError,
 		Claims:       &JWTClaims{},
+		TokenLookup:  "header:Authorization,cookie:" + conf.Cookie.Name,
 	})
 }
 

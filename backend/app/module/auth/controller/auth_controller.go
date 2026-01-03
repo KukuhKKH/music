@@ -1,9 +1,12 @@
 package controller
 
 import (
+	"time"
+
 	"git.dev.siap.id/kukuhkkh/app-music/app/middleware"
 	"git.dev.siap.id/kukuhkkh/app-music/app/module/auth/request"
 	"git.dev.siap.id/kukuhkkh/app-music/app/module/auth/service"
+	"git.dev.siap.id/kukuhkkh/app-music/utils/config"
 	"git.dev.siap.id/kukuhkkh/app-music/utils/response"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v4"
@@ -11,17 +14,20 @@ import (
 
 type authController struct {
 	authService service.AuthService
+	cfg         *config.Config
 }
 
 type AuthController interface {
 	Login(c *fiber.Ctx) error
 	Register(c *fiber.Ctx) error
 	Me(c *fiber.Ctx) error
+	Logout(c *fiber.Ctx) error
 }
 
-func NewAuthController(authService service.AuthService) AuthController {
+func NewAuthController(authService service.AuthService, cfg *config.Config) AuthController {
 	return &authController{
 		authService: authService,
+		cfg:         cfg,
 	}
 }
 
@@ -47,6 +53,15 @@ func (_i *authController) Login(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+
+	c.Cookie(&fiber.Cookie{
+		Name:     _i.cfg.Cookie.Name,
+		Value:    res.Token,
+		Expires:  time.Unix(res.ExpiresAt, 0),
+		HTTPOnly: _i.cfg.Cookie.HTTPOnly,
+		Secure:   _i.cfg.Cookie.Secure,
+		SameSite: _i.cfg.Cookie.SameSite,
+	})
 
 	return response.Resp(c, response.Response{
 		Data:     res,

@@ -91,6 +91,13 @@ type middleware = struct {
 	}
 }
 
+type cookie struct {
+	Name     string `toml:"name"`
+	HTTPOnly bool   `toml:"http_only"`
+	Secure   bool   `toml:"secure"`
+	SameSite string `toml:"same_site"`
+}
+
 type storage = struct {
 	Driver string `toml:"driver"`
 
@@ -122,6 +129,7 @@ type Config struct {
 	DB         db
 	Logger     logger
 	Middleware middleware
+	Cookie     cookie
 	Storage    storage
 }
 
