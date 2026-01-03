@@ -48,5 +48,6 @@ func (_i *AuthRouter) RegisterAuthRoutes() {
 		router.Post("/login", authController.Login)
 		router.Post("/register", authController.Register)
 		router.Get("/me", middleware.Protected(), authController.Me)
+		router.Post("/logout", authController.Logout)
 	})
 }

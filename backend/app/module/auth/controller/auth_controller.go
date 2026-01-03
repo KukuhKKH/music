@@ -124,3 +124,25 @@ func (_i *authController) Me(c *fiber.Ctx) error {
 		Code:     fiber.StatusOK,
 	})
 }
+
+// Logout
+// @Summary      Logout
+// @Description  API for logout
+// @Tags         Authentication
+// @Success      200  {object}  response.Response
+// @Router       /api/v1/auth/logout [post]
+func (_i *authController) Logout(c *fiber.Ctx) error {
+	c.Cookie(&fiber.Cookie{
+		Name:     _i.cfg.Cookie.Name,
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour),
+		HTTPOnly: _i.cfg.Cookie.HTTPOnly,
+		Secure:   _i.cfg.Cookie.Secure,
+		SameSite: _i.cfg.Cookie.SameSite,
+	})
+
+	return response.Resp(c, response.Response{
+		Messages: response.Messages{"Logout success"},
+		Code:     fiber.StatusOK,
+	})
+}
