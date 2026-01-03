@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useDebounceFn } from "@vueuse/core";
 import {
   Check,
   ChevronLeft,
@@ -10,13 +9,12 @@ import {
   MoreHorizontal,
   Pause,
   Play,
-  Search,
   Trash2,
   X,
 } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 import { usePlayerStore } from "~/stores/player";
-import type { MusicMeta, MusicResponse, Track } from "~/types/music";
+import type { MusicMeta, Track } from "~/types/music";
 import { formatDuration, formatFileSize } from "~/lib/format";
 
 const props = defineProps<{
@@ -101,9 +99,6 @@ async function saveTitle(track: Track) {
           <TableHead class="font-bold text-foreground hidden sm:table-cell">
             Artist
           </TableHead>
-          <TableHead class="font-bold text-foreground hidden sm:table-cell">
-            Album
-          </TableHead>
           <TableHead
             class="font-bold text-foreground hidden md:table-cell w-[100px]"
           >
@@ -122,7 +117,7 @@ async function saveTitle(track: Track) {
           v-if="isLoading && tracks.length === 0"
           class="hover:bg-transparent"
         >
-          <TableCell colspan="7" class="h-48 text-center">
+          <TableCell colspan="8" class="h-48 text-center">
             <div class="flex flex-col items-center gap-3">
               <Loader2 class="h-8 w-8 animate-spin text-primary opacity-50" />
               <p
@@ -135,7 +130,7 @@ async function saveTitle(track: Track) {
         </TableRow>
 
         <TableRow v-else-if="tracks.length === 0" class="hover:bg-transparent">
-          <TableCell colspan="7" class="h-64 text-center">
+          <TableCell colspan="8" class="h-64 text-center">
             <div class="flex flex-col items-center justify-center space-y-3">
               <div class="p-6 rounded-full bg-muted/30">
                 <FileMusic class="h-10 w-10 text-muted-foreground/30" />
@@ -156,7 +151,7 @@ async function saveTitle(track: Track) {
           class="group transition-colors h-[64px] border-b last:border-0"
           :class="
             player.currentTrack?.id === track.id
-              ? 'bg-primary/[0.04] hover:bg-primary/[0.08]'
+              ? 'bg-primary/4 hover:bg-primary/8'
               : 'hover:bg-muted/30'
           "
         >
@@ -254,13 +249,6 @@ async function saveTitle(track: Track) {
               class="text-xs font-semibold text-muted-foreground/60 truncate uppercase tracking-tight"
             >
               {{ track.artist || "Unknown Artist" }}
-            </span>
-          </TableCell>
-          <TableCell class="hidden sm:table-cell">
-            <span
-              class="text-xs font-semibold text-muted-foreground/60 truncate uppercase tracking-tight"
-            >
-              {{ track.album || "Unknown Album" }}
             </span>
           </TableCell>
           <TableCell

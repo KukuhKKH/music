@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useDebounceFn } from "@vueuse/core";
-import { Music, Play, Search, Trash2 } from "lucide-vue-next";
+import { Music, Search, Trash2 } from "lucide-vue-next";
+import { toast } from "vue-sonner";
 import { usePlayerStore } from "~/stores/player";
 import type { MusicMeta, MusicResponse, Track } from "~/types/music";
-import { toast } from "vue-sonner";
 
 const config = useRuntimeConfig();
 const player = usePlayerStore();
@@ -39,6 +39,8 @@ async function fetchTracks() {
     isLoading.value = false;
   }
 }
+
+defineExpose({ fetchTracks });
 
 const debouncedSearch = useDebounceFn(() => {
   currentPage.value = 1;
@@ -129,7 +131,7 @@ async function bulkDelete() {
             class="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"
           />
           <Input
-            v-model="searchQuery"
+            v-model:model-value="searchQuery"
             type="search"
             placeholder="Quick search..."
             class="pl-9 bg-background/50 border-none shadow-none h-8 text-xs focus-visible:ring-1"

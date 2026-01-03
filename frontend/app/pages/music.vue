@@ -4,6 +4,13 @@ import { Upload } from "lucide-vue-next";
 definePageMeta({
   title: "My Music Library",
 });
+
+const isUploadOpen = ref(false);
+const musicListRef = ref<{ fetchTracks: () => void } | null>(null);
+
+function handleUploadSuccess() {
+  musicListRef.value?.fetchTracks();
+}
 </script>
 
 <template>
@@ -16,12 +23,23 @@ definePageMeta({
           Manage, preview and update your music collection metadata.
         </p>
       </div>
-      <Button size="lg" class="shadow-md">
+      <Button
+        size="lg"
+        class="shadow-md bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-8 transition-all hover:scale-105 active:scale-95"
+        @click="isUploadOpen = true"
+      >
         <Upload class="mr-2 h-5 w-5" />
         Upload New Track
       </Button>
     </div>
 
-    <MusicList />
+    <!-- Main Content Area -->
+    <MusicList ref="musicListRef" />
+
+    <!-- Upload Dialog Component -->
+    <MusicUploadDialog
+      v-model:open="isUploadOpen"
+      @success="handleUploadSuccess"
+    />
   </div>
 </template>
