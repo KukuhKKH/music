@@ -14,7 +14,9 @@ func NewLogger(cfg *config.Config) zerolog.Logger {
 	zerolog.TimeFieldFormat = cfg.Logger.TimeFormat
 
 	if cfg.Logger.Prettier {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout}).With().Caller().Logger()
+	} else {
+		log.Logger = log.With().Caller().Logger()
 	}
 
 	zerolog.SetGlobalLevel(cfg.Logger.Level)
