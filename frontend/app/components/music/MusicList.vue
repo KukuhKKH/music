@@ -2,11 +2,9 @@
 import { useDebounceFn } from "@vueuse/core";
 import { Music, Search, Trash2 } from "lucide-vue-next";
 import { toast } from "vue-sonner";
-import { usePlayerStore } from "~/stores/player";
 import type { MusicMeta, MusicResponse, Track } from "~/types/music";
 
 const config = useRuntimeConfig();
-const player = usePlayerStore();
 
 const tracks = ref<Track[]>([]);
 const meta = ref<MusicMeta | null>(null);
@@ -18,7 +16,7 @@ const selectedIds = ref<Set<number>>(new Set());
 async function fetchTracks() {
   isLoading.value = true;
   try {
-    const { data } = await useFetch<MusicResponse>(
+    const response = await $fetch<MusicResponse>(
       `${config.public.apiBase}/music`,
       {
         query: {
@@ -28,12 +26,14 @@ async function fetchTracks() {
         },
       }
     );
-    if (data.value) {
-      tracks.value = data.value.data || [];
-      meta.value = data.value.meta || null;
+    
+    if (response) {
+      tracks.value = response.data || [];
+      meta.value = response.meta || null;
       selectedIds.value.clear();
     }
-  } catch {
+  } catch (err) {
+    console.error("Fetch tracks error:", err);
     toast.error("Failed to fetch tracks");
   } finally {
     isLoading.value = false;
@@ -53,22 +53,27 @@ watch(currentPage, fetchTracks);
 onMounted(fetchTracks);
 
 function toggleSelectAll() {
-  if (
-    tracks.value.length > 0 &&
-    selectedIds.value.size === tracks.value.length
-  ) {
-    selectedIds.value.clear();
+  const allCurrentOnPageSelected = tracks.value.every((t) =>
+    selectedIds.value.has(t.id)
+  );
+  const newSelected = new Set(selectedIds.value);
+
+  if (allCurrentOnPageSelected) {
+    tracks.value.forEach((t) => newSelected.delete(t.id));
   } else {
-    selectedIds.value = new Set(tracks.value.map((t) => t.id));
+    tracks.value.forEach((t) => newSelected.add(t.id));
   }
+  selectedIds.value = newSelected;
 }
 
 function toggleSelect(id: number) {
-  if (selectedIds.value.has(id)) {
-    selectedIds.value.delete(id);
+  const newSelected = new Set(selectedIds.value);
+  if (newSelected.has(id)) {
+    newSelected.delete(id);
   } else {
-    selectedIds.value.add(id);
+    newSelected.add(id);
   }
+  selectedIds.value = newSelected;
 }
 
 async function deleteTrack(id: number) {
@@ -80,7 +85,8 @@ async function deleteTrack(id: number) {
       currentPage.value--;
     }
     fetchTracks();
-  } catch {
+  } catch (err) {
+    console.error("Delete error:", err);
     toast.error("Failed to delete track");
   }
 }
@@ -98,7 +104,8 @@ async function bulkDelete() {
     toast.success(`${ids.length} tracks deleted`);
     selectedIds.value.clear();
     fetchTracks();
-  } catch {
+  } catch (err) {
+    console.error("Bulk delete error:", err);
     toast.error("Failed to perform bulk delete");
   } finally {
     isLoading.value = false;
@@ -131,7 +138,7 @@ async function bulkDelete() {
             class="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground"
           />
           <Input
-            v-model:model-value="searchQuery"
+            v-model="searchQuery"
             type="search"
             placeholder="Quick search..."
             class="pl-9 bg-background/50 border-none shadow-none h-8 text-xs focus-visible:ring-1"
@@ -140,7 +147,7 @@ async function bulkDelete() {
       </div>
     </CardHeader>
 
-    <!-- Bulk Actions Bar (Sticky/Floating effect) -->
+    <!-- Bulk Actions Bar -->
     <div
       v-if="selectedIds.size > 0"
       class="bg-primary/5 border-b px-4 py-2 flex items-center justify-between animate-in fade-in slide-in-from-top-2"
@@ -153,7 +160,7 @@ async function bulkDelete() {
           <AlertDialogTrigger as-child>
             <Button
               variant="destructive"
-              size="xs"
+              size="sm"
               class="h-7 text-[10px] font-bold uppercase tracking-wider px-3"
             >
               <Trash2 class="mr-1.5 h-3 w-3" />
@@ -185,12 +192,14 @@ async function bulkDelete() {
     <!-- Table Body -->
     <CardContent class="p-0">
       <MusicTrackTable
-        v-model:search-query="searchQuery"
-        v-model:current-page="currentPage"
+        :search-query="searchQuery"
+        :current-page="currentPage"
         :tracks="tracks"
         :is-loading="isLoading"
         :meta="meta"
         :selected-ids="selectedIds"
+        @update:search-query="(val) => (searchQuery = val)"
+        @update:current-page="(val) => (currentPage = val)"
         @toggle-select-all="toggleSelectAll"
         @toggle-select="toggleSelect"
         @delete-track="deleteTrack"

@@ -44,7 +44,8 @@ const config = useRuntimeConfig();
 
 const isAllSelected = computed(
   () =>
-    props.tracks.length > 0 && props.selectedIds.size === props.tracks.length
+    props.tracks.length > 0 &&
+    props.tracks.every((t) => props.selectedIds.has(t.id))
 );
 
 function startEdit(track: Track) {
@@ -117,7 +118,7 @@ async function saveTitle(track: Track) {
           v-if="isLoading && tracks.length === 0"
           class="hover:bg-transparent"
         >
-          <TableCell colspan="8" class="h-48 text-center">
+          <TableCell colspan="7" class="h-48 text-center">
             <div class="flex flex-col items-center gap-3">
               <Loader2 class="h-8 w-8 animate-spin text-primary opacity-50" />
               <p
@@ -130,7 +131,7 @@ async function saveTitle(track: Track) {
         </TableRow>
 
         <TableRow v-else-if="tracks.length === 0" class="hover:bg-transparent">
-          <TableCell colspan="8" class="h-64 text-center">
+          <TableCell colspan="7" class="h-64 text-center">
             <div class="flex flex-col items-center justify-center space-y-3">
               <div class="p-6 rounded-full bg-muted/30">
                 <FileMusic class="h-10 w-10 text-muted-foreground/30" />
