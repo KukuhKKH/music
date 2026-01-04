@@ -81,6 +81,7 @@ async function saveTitle(track: Track) {
         artist: track.artist,
         album: track.album || "",
       },
+      credentials: "include",
     });
 
     track.title = editingTitle.value;
