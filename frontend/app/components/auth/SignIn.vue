@@ -37,8 +37,12 @@ const onSubmit = form.handleSubmit(async (values) => {
   }
 });
 
+function handlePajangan() {
+  toast.info("Hayooo ngapain, ini cuma pajangan aja yaaaaa");
+}
+
 const onSocial = (provider: string) => {
-  toast.info("Hehehe, ini cuma pajangan doang");
+  handlePajangan();
 };
 </script>
 
@@ -106,8 +110,9 @@ const onSocial = (provider: string) => {
             <div class="flex items-center">
               <FormLabel>Password</FormLabel>
               <NuxtLink
-                to="/forgot-password"
+                to="#"
                 class="ml-auto inline-block text-sm underline"
+                @click.prevent="handlePajangan"
               >
                 Forgot your password?
               </NuxtLink>
@@ -131,5 +136,3 @@ const onSocial = (provider: string) => {
     </div>
   </div>
 </template>
-
-<style scoped></style>
