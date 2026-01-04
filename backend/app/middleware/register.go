@@ -33,9 +33,10 @@ func NewMiddleware(app *fiber.App, cfg *config.Config) *Middleware {
 func (m *Middleware) Register() {
 	// CORS
 	m.App.Use(cors.New(cors.Config{
-		Next:         utils.IsEnabled(m.Cfg.Middleware.Cors.Enable),
-		AllowOrigins: m.Cfg.Middleware.Cors.AllowOrigins,
-		AllowHeaders: m.Cfg.Middleware.Cors.AllowHeaders,
+		Next:             utils.IsEnabled(m.Cfg.Middleware.Cors.Enable),
+		AllowOrigins:     m.Cfg.Middleware.Cors.AllowOrigins,
+		AllowHeaders:     m.Cfg.Middleware.Cors.AllowHeaders,
+		AllowCredentials: true,
 	}))
 
 	// Add Extra Middlewares
