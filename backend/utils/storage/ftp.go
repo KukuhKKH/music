@@ -3,12 +3,15 @@ package storage
 import (
 	"fmt"
 	"io"
+	"log"
+	"path/filepath"
 	"time"
 
-	"github.com/jlaffaye/ftp"
+	"github.com/pkg/sftp"
+	"golang.org/x/crypto/ssh"
 )
 
-type FtpStorage struct {
+type SftpStorage struct {
 	Host      string
 	Port      int
 	User      string
@@ -17,8 +20,8 @@ type FtpStorage struct {
 	PublicUrl string
 }
 
-func NewFtpStorage(host string, port int, user, password, baseDir, publicUrl string) *FtpStorage {
-	return &FtpStorage{
+func NewSftpStorage(host string, port int, user, password, baseDir, publicUrl string) *SftpStorage {
+	return &SftpStorage{
 		Host:      host,
 		Port:      port,
 		User:      user,
@@ -28,56 +31,82 @@ func NewFtpStorage(host string, port int, user, password, baseDir, publicUrl str
 	}
 }
 
-func (s *FtpStorage) connect() (*ftp.ServerConn, error) {
-	c, err := ftp.Dial(fmt.Sprintf("%s:%d", s.Host, s.Port), ftp.DialWithTimeout(5*time.Second))
-	if err != nil {
-		return nil, err
+func (s *SftpStorage) connect() (*ssh.Client, *sftp.Client, error) {
+	config := &ssh.ClientConfig{
+		User: s.User,
+		Auth: []ssh.AuthMethod{
+			ssh.Password(s.Password),
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		Timeout:         10 * time.Second,
 	}
 
-	err = c.Login(s.User, s.Password)
+	addr := fmt.Sprintf("%s:%d", s.Host, s.Port)
+
+	conn, err := ssh.Dial("tcp", addr, config)
 	if err != nil {
-		_ = c.Quit()
-		return nil, err
+		log.Printf("Gagal Dial SSH ke %s: %v", addr, err)
+		return nil, nil, err
 	}
 
-	return c, nil
+	client, err := sftp.NewClient(conn)
+	if err != nil {
+		conn.Close()
+		log.Printf("Gagal Handshake SFTP: %v", err)
+		return nil, nil, err
+	}
+
+	return conn, client, nil
 }
 
-func (s *FtpStorage) Upload(filename string, file io.Reader) (string, error) {
-	c, err := s.connect()
+func (s *SftpStorage) Upload(filename string, file io.Reader) (string, error) {
+	sshConn, client, err := s.connect()
 	if err != nil {
 		return "", err
 	}
 
-	defer c.Quit()
+	defer sshConn.Close()
+	defer client.Close()
 
+	fullPath := filename
 	if s.BaseDir != "" {
-		_ = c.ChangeDir(s.BaseDir)
+		_ = client.MkdirAll(s.BaseDir)
+		fullPath = filepath.Join(s.BaseDir, filename)
 	}
 
-	err = c.Stor(filename, file)
+	dstFile, err := client.Create(fullPath)
 	if err != nil {
+		log.Printf("Gagal create file %s: %v", fullPath, err)
+		return "", err
+	}
+
+	defer dstFile.Close()
+
+	_, err = io.Copy(dstFile, file)
+	if err != nil {
+		log.Printf("Gagal upload data: %v", err)
 		return "", err
 	}
 
 	return filename, nil
 }
 
-func (s *FtpStorage) Delete(filename string) error {
-	c, err := s.connect()
+func (s *SftpStorage) Delete(filename string) error {
+	sshConn, client, err := s.connect()
 	if err != nil {
 		return err
 	}
+	defer sshConn.Close()
+	defer client.Close()
 
-	defer c.Quit()
-
+	fullPath := filename
 	if s.BaseDir != "" {
-		_ = c.ChangeDir(s.BaseDir)
+		fullPath = filepath.Join(s.BaseDir, filename)
 	}
 
-	return c.Delete(filename)
+	return client.Remove(fullPath)
 }
 
-func (s *FtpStorage) GetURL(filename string) string {
+func (s *SftpStorage) GetURL(filename string) string {
 	return fmt.Sprintf("%s/%s/%s", s.PublicUrl, s.BaseDir, filename)
 }

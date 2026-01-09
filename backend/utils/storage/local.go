@@ -43,5 +43,5 @@ func (s *LocalStorage) Delete(filename string) error {
 }
 
 func (s *LocalStorage) GetURL(filename string) string {
-	return fmt.Sprintf("/storage/%s", filename)
+	return fmt.Sprintf("http://localhost:8000/storage/%s", filename)
 }
