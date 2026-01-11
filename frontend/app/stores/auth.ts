@@ -2,22 +2,31 @@ import { defineStore } from 'pinia'
 
 export const useAuthStore = defineStore('auth', () => {
   const config = useRuntimeConfig()
+  const token = useCookie('auth_token', {
+    path: '/',
+    watch: true,
+    maxAge: 3600 * 24 * 7, // 7 days default
+  })
+
   const user = ref<any>(null)
   const isLoading = ref(false)
 
-  // fetchUser will now rely on the HttpOnly cookie handled by the browser/proxy
   const fetchUser = async () => {
+    if (!token.value)
+      return
+
     isLoading.value = true
     try {
       const { data, error } = await useFetch<any>(`${config.public.apiBase}/auth/me`, {
-        // useFetch automatically includes cookies if same-origin (proxied)
-        // No manual headers needed for token
+        headers: {
+          Authorization: `Bearer ${token.value}`,
+        },
       })
 
       if (error.value) {
         user.value = null
         if (error.value.statusCode === 401) {
-          // If we are on a protected route, middleware will handle redirect
+          token.value = null
         }
         return
       }
@@ -26,12 +35,11 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = data.value.data
       }
     }
-
     catch (err) {
       console.error('Failed to fetch user:', err)
       user.value = null
+      token.value = null
     }
-
     finally {
       isLoading.value = false
     }
@@ -64,27 +72,36 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     if (data.value && data.value.data) {
+      token.value = data.value.data.token
       await fetchUser()
       return data.value.data
     }
   }
 
   const logout = async () => {
+    // If you want to notify backend about logout
     try {
-      await useFetch(`${config.public.apiBase}/auth/logout`, { method: 'POST' })
+      await useFetch(`${config.public.apiBase}/auth/logout`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token.value}`,
+        },
+      })
     }
     catch {
-      // ignored
+      // ignore
     }
 
+    token.value = null
     user.value = null
     navigateTo('/login')
   }
 
-  const isLoggedIn = computed(() => !!user.value)
+  const isLoggedIn = computed(() => !!token.value)
 
   return {
     user,
+    token,
     isLoading,
     isLoggedIn,
     fetchUser,
