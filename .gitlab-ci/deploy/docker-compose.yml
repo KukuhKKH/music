@@ -10,7 +10,7 @@ services:
       replicas: 1
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.music-api.rule=Host(`api-music.banglipai.tech`)"
+        - "traefik.http.routers.music-api.rule=Host(`api-music.${DOMAIN}`)"
         - "traefik.http.routers.music-api.entrypoints=websecure"
         - "traefik.http.routers.music-api.tls.certresolver=myresolver"
         - "traefik.http.services.music-api.loadbalancer.server.port=3000"
@@ -23,7 +23,7 @@ services:
       replicas: 1
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.music-web.rule=Host(`music.banglipai.tech`)"
+        - "traefik.http.routers.music-web.rule=Host(`music.${DOMAIN}`)"
         - "traefik.http.routers.music-web.entrypoints=websecure"
         - "traefik.http.routers.music-web.tls.certresolver=myresolver"
         - "traefik.http.services.music-web.loadbalancer.server.port=80"
