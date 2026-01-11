@@ -18,7 +18,7 @@ func NewStorage(cfg *config.Config) (Storage, error) {
 	case "local":
 		return NewLocalStorage(cfg.Storage.Local.Path)
 	case "ftp":
-		return NewFtpStorage(
+		return NewSftpStorage(
 			cfg.Storage.Ftp.Host,
 			cfg.Storage.Ftp.Port,
 			cfg.Storage.Ftp.User,

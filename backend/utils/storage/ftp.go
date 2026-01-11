@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"path/filepath"
+	"path"
+	"strings"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -51,7 +52,8 @@ func (s *SftpStorage) connect() (*ssh.Client, *sftp.Client, error) {
 
 	client, err := sftp.NewClient(conn)
 	if err != nil {
-		conn.Close()
+		// explicitly ignore error from conn.Close()
+		_ = conn.Close()
 		log.Printf("Gagal Handshake SFTP: %v", err)
 		return nil, nil, err
 	}
@@ -65,13 +67,22 @@ func (s *SftpStorage) Upload(filename string, file io.Reader) (string, error) {
 		return "", err
 	}
 
-	defer sshConn.Close()
-	defer client.Close()
+	defer func() { _ = sshConn.Close() }()
+	defer func() { _ = client.Close() }()
 
+	// build remote POSIX-style full path
 	fullPath := filename
 	if s.BaseDir != "" {
-		_ = client.MkdirAll(s.BaseDir)
-		fullPath = filepath.Join(s.BaseDir, filename)
+		fullPath = path.Join(s.BaseDir, filename)
+	}
+
+	// ensure parent directory exists (handles nested paths in filename)
+	dir := path.Dir(fullPath)
+	if dir != "" && dir != "." {
+		if err := client.MkdirAll(dir); err != nil {
+			log.Printf("Gagal create dir %s: %v", dir, err)
+			return "", err
+		}
 	}
 
 	dstFile, err := client.Create(fullPath)
@@ -80,7 +91,7 @@ func (s *SftpStorage) Upload(filename string, file io.Reader) (string, error) {
 		return "", err
 	}
 
-	defer dstFile.Close()
+	defer func() { _ = dstFile.Close() }()
 
 	_, err = io.Copy(dstFile, file)
 	if err != nil {
@@ -96,17 +107,19 @@ func (s *SftpStorage) Delete(filename string) error {
 	if err != nil {
 		return err
 	}
-	defer sshConn.Close()
-	defer client.Close()
+	defer func() { _ = sshConn.Close() }()
+	defer func() { _ = client.Close() }()
 
 	fullPath := filename
 	if s.BaseDir != "" {
-		fullPath = filepath.Join(s.BaseDir, filename)
+		fullPath = path.Join(s.BaseDir, filename)
 	}
 
 	return client.Remove(fullPath)
 }
 
 func (s *SftpStorage) GetURL(filename string) string {
-	return fmt.Sprintf("%s/%s/%s", s.PublicUrl, s.BaseDir, filename)
+	fullPath := path.Join(s.BaseDir, filename)
+	relativePath := strings.TrimPrefix(fullPath, "upload/")
+	return fmt.Sprintf("%s/%s", s.PublicUrl, relativePath)
 }
