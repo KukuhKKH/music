@@ -1,0 +1,16 @@
+services:
+  backend:
+    image: ${IMAGE_NAMESPACE}/base-music-backend:latest
+    build:
+      context: backend
+      dockerfile: Dockerfile
+      cache_from:
+        - ${IMAGE_NAMESPACE}/base-music-backend:latest
+
+  frontend:
+    image: ${IMAGE_NAMESPACE}/base-music-frontend:latest
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+      cache_from:
+        - ${IMAGE_NAMESPACE}/base-music-frontend:latest
