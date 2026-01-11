@@ -39,6 +39,7 @@ func NewFiber(cfg *config.Config) *fiber.App {
 		EnablePrintRoutes:     cfg.App.PrintRoutes,
 		BodyLimit:             bodyLimit,
 		DisableStartupMessage: true,
+		StreamRequestBody:     true,
 	})
 
 	// pass production config to check it
