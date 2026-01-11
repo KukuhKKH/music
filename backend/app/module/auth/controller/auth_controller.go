@@ -13,8 +13,9 @@ import (
 )
 
 type authController struct {
-	authService service.AuthService
-	cfg         *config.Config
+	authService    service.AuthService
+	cfg            *config.Config
+	cookieTemplate *fiber.Cookie
 }
 
 type AuthController interface {
@@ -25,9 +26,19 @@ type AuthController interface {
 }
 
 func NewAuthController(authService service.AuthService, cfg *config.Config) AuthController {
+	// prepare a reusable cookie template to avoid repeating field assignments on each login/logout
+	tmpl := &fiber.Cookie{
+		Name:     cfg.Cookie.Name,
+		HTTPOnly: cfg.Cookie.HTTPOnly,
+		Secure:   cfg.Cookie.Secure,
+		SameSite: cfg.Cookie.SameSite,
+		Path:     "/",
+	}
+
 	return &authController{
-		authService: authService,
-		cfg:         cfg,
+		authService:    authService,
+		cfg:            cfg,
+		cookieTemplate: tmpl,
 	}
 }
 
@@ -54,14 +65,8 @@ func (_i *authController) Login(c *fiber.Ctx) error {
 		return err
 	}
 
-	c.Cookie(&fiber.Cookie{
-		Name:     _i.cfg.Cookie.Name,
-		Value:    res.Token,
-		Expires:  time.Unix(res.ExpiresAt, 0),
-		HTTPOnly: _i.cfg.Cookie.HTTPOnly,
-		Secure:   _i.cfg.Cookie.Secure,
-		SameSite: _i.cfg.Cookie.SameSite,
-	})
+	// set cookie using helper
+	c.Cookie(_i.makeCookie(res.Token, time.Unix(res.ExpiresAt, 0)))
 
 	return response.Resp(c, response.Response{
 		Data:     res,
@@ -132,17 +137,21 @@ func (_i *authController) Me(c *fiber.Ctx) error {
 // @Success      200  {object}  response.Response
 // @Router       /api/v1/auth/logout [post]
 func (_i *authController) Logout(c *fiber.Ctx) error {
-	c.Cookie(&fiber.Cookie{
-		Name:     _i.cfg.Cookie.Name,
-		Value:    "",
-		Expires:  time.Now().Add(-time.Hour),
-		HTTPOnly: _i.cfg.Cookie.HTTPOnly,
-		Secure:   _i.cfg.Cookie.Secure,
-		SameSite: _i.cfg.Cookie.SameSite,
-	})
+	// expire the cookie using helper
+	c.Cookie(_i.makeCookie("", time.Now().Add(-time.Hour)))
 
 	return response.Resp(c, response.Response{
 		Messages: response.Messages{"Logout success"},
 		Code:     fiber.StatusOK,
 	})
+}
+
+// small helper to construct cookie consistently using controller config
+func (_i *authController) makeCookie(value string, expires time.Time) *fiber.Cookie {
+	// clone template to avoid mutating shared state
+	c := *(_i.cookieTemplate)
+	c.Value = value
+	c.Expires = expires
+
+	return &c
 }
