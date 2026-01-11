@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"io"
 
@@ -8,7 +9,7 @@ import (
 )
 
 type Storage interface {
-	Upload(filename string, file io.Reader) (string, error)
+	Upload(ctx context.Context, filename string, file io.Reader) (string, error)
 	Delete(filename string) error
 	GetURL(filename string) string
 }

@@ -1,7 +1,9 @@
 package service
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"mime/multipart"
 	"path/filepath"
 	"time"
@@ -23,7 +25,7 @@ type trackService struct {
 type TrackService interface {
 	GetPaginatedTracks(search string, p *paginator.Pagination) (tracks []response.TrackResponse, pagination *paginator.Pagination, err error)
 	GetTrackByID(id uint64) (track *response.TrackResponse, err error)
-	CreateTrack(req request.CreateTrackRequest, userID uint64, fileHeader *multipart.FileHeader) (track *response.TrackResponse, err error)
+	CreateTrack(ctx context.Context, req request.CreateTrackRequest, userID uint64, fileHeader *multipart.FileHeader) (track *response.TrackResponse, err error)
 	UpdateTrack(id uint64, req request.UpdateTrackRequest, userID uint64) (track *response.TrackResponse, err error)
 	DeleteTrack(id uint64, userID uint64) (err error)
 }
@@ -54,7 +56,11 @@ func (s *trackService) GetTrackByID(id uint64) (track *response.TrackResponse, e
 	return &res, nil
 }
 
-func (s *trackService) CreateTrack(req request.CreateTrackRequest, userID uint64, fileHeader *multipart.FileHeader) (track *response.TrackResponse, err error) {
+func (s *trackService) CreateTrack(ctx context.Context, req request.CreateTrackRequest, userID uint64, fileHeader *multipart.FileHeader) (track *response.TrackResponse, err error) {
+	start := time.Now()
+	log.Printf("[track] create start user=%d title=%q size=%d ct=%q",
+		userID, req.Title, fileHeader.Size, fileHeader.Header.Get("Content-Type"))
+
 	file, err := fileHeader.Open()
 	if err != nil {
 		return nil, err
@@ -62,17 +68,20 @@ func (s *trackService) CreateTrack(req request.CreateTrackRequest, userID uint64
 
 	defer file.Close()
 
-	// Generate a unique filename
 	ext := filepath.Ext(fileHeader.Filename)
 	storageFilename := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), helpers.Slug(req.Title), ext)
 
-	// Stream to Storage
-	_, err = s.storage.Upload(storageFilename, file)
-	if err != nil {
+	// Hard timeout agar tidak menggantung sampai Traefik timeout
+	uploadCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+
+	log.Printf("[track] upload to storage start name=%s", storageFilename)
+	if _, err := s.storage.Upload(uploadCtx, storageFilename, file); err != nil {
+		log.Printf("[track] upload failed err=%v dur=%s", err, time.Since(start))
 		return nil, err
 	}
+	log.Printf("[track] upload to storage done dur=%s", time.Since(start))
 
-	// Create DB Record
 	newTrack := &schema.Track{
 		UserID:           userID,
 		Title:            req.Title,
@@ -91,6 +100,8 @@ func (s *trackService) CreateTrack(req request.CreateTrackRequest, userID uint64
 	}
 
 	trackRes := response.FromTrackSchema(*res, s.storage.GetURL(res.StorageFilename))
+	log.Printf("[track] create success id=%d total_dur=%s", res.ID, time.Since(start))
+
 	return &trackRes, nil
 }
 

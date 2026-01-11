@@ -33,7 +33,7 @@ func NewS3Storage(endpoint, accessKey, secretKey, bucket, region string, useSSL 
 	}, nil
 }
 
-func (s *S3Storage) Upload(filename string, file io.Reader) (string, error) {
+func (s *S3Storage) Upload(ctx context.Context, filename string, file io.Reader) (string, error) {
 	_, err := s.Client.PutObject(context.Background(), s.Bucket, filename, file, -1, minio.PutObjectOptions{})
 	if err != nil {
 		return "", err

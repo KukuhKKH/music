@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"strconv"
+
 	"git.dev.siap.id/kukuhkkh/app-music/app/middleware"
 	"git.dev.siap.id/kukuhkkh/app-music/app/module/track/request"
 	"git.dev.siap.id/kukuhkkh/app-music/app/module/track/service"
@@ -99,17 +101,31 @@ func (_i *trackController) Create(c *fiber.Ctx) error {
 	userToken := c.Locals("user").(*jwt.Token)
 	claims := userToken.Claims.(*middleware.JWTClaims)
 
-	req := new(request.CreateTrackRequest)
-	if err := c.BodyParser(req); err != nil {
-		return err
+	req := request.CreateTrackRequest{
+		Title:  c.FormValue("title"),
+		Artist: c.FormValue("artist"),
+		Album:  c.FormValue("album"),
 	}
 
-	file, err := c.FormFile("file")
+	if d := c.FormValue("duration"); d != "" {
+		di, err := strconv.Atoi(d)
+		if err != nil {
+			return &response.Error{
+				Code:    fiber.StatusBadRequest,
+				Message: "Invalid duration",
+			}
+		}
+		req.Duration = di
+	}
+
+	fileHeader, err := c.FormFile("file")
 	if err != nil {
-		return err
+		return &response.Error{
+			Code:    fiber.StatusBadRequest,
+			Message: "Missing file",
+		}
 	}
 
-	// Validate file type
 	allowedMimeTypes := map[string]bool{
 		"audio/mpeg":   true,
 		"audio/wav":    true,
@@ -123,7 +139,7 @@ func (_i *trackController) Create(c *fiber.Ctx) error {
 		"audio/webm":   true,
 	}
 
-	contentType := file.Header.Get("Content-Type")
+	contentType := fileHeader.Header.Get("Content-Type")
 	if !allowedMimeTypes[contentType] {
 		return &response.Error{
 			Code:    fiber.StatusBadRequest,
@@ -131,7 +147,7 @@ func (_i *trackController) Create(c *fiber.Ctx) error {
 		}
 	}
 
-	res, err := _i.trackService.CreateTrack(*req, claims.UserID, file)
+	res, err := _i.trackService.CreateTrack(c.Context(), req, claims.UserID, fileHeader)
 	if err != nil {
 		return err
 	}
