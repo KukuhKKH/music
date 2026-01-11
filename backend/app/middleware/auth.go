@@ -9,8 +9,19 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 )
 
+// package-level config pointer; set once at startup via SetConfig to avoid repeated parsing
+var cfg *config.Config
+
+// SetConfig sets the package-level configuration pointer.
+func SetConfig(c *config.Config) {
+	cfg = c
+}
+
 func Protected() fiber.Handler {
-	conf := config.NewConfig()
+	conf := cfg
+	if conf == nil {
+		conf = config.NewConfig()
+	}
 
 	if conf.Middleware.Jwt.Secret == "" {
 		panic("JWT secret is not set")
@@ -42,7 +53,10 @@ type JWTClaims struct {
 }
 
 func GenerateTokenAccess(userID uint64) (*JWTClaims, error) {
-	conf := config.NewConfig()
+	conf := cfg
+	if conf == nil {
+		conf = config.NewConfig()
+	}
 
 	mySigningKey := []byte(conf.Middleware.Jwt.Secret)
 

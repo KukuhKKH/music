@@ -23,6 +23,8 @@ type Middleware struct {
 }
 
 func NewMiddleware(app *fiber.App, cfg *config.Config) *Middleware {
+	SetConfig(cfg)
+
 	return &Middleware{
 		App: app,
 		Cfg: cfg,
