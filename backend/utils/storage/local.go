@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -21,7 +22,7 @@ func NewLocalStorage(path string) (*LocalStorage, error) {
 	return &LocalStorage{Path: path}, nil
 }
 
-func (s *LocalStorage) Upload(filename string, file io.Reader) (string, error) {
+func (s *LocalStorage) Upload(ctx context.Context, filename string, file io.Reader) (string, error) {
 	dstPath := filepath.Join(s.Path, filename)
 	dst, err := os.Create(dstPath)
 	if err != nil {

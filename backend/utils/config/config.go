@@ -1,9 +1,9 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -134,35 +134,55 @@ type Config struct {
 }
 
 // ParseConfig func to parse config
-func ParseConfig(name string, debug ...bool) (contents *Config, err error) {
-	var (
-		file []byte
-	)
+func ParseConfig(name string) (contents *Config, err error) {
+	filename := name + ".toml"
+	candidates := []string{filename, filepath.Join("config", filename)}
 
-	if len(debug) > 0 {
-		file, err = os.ReadFile(name)
-	} else {
-		_, b, _, _ := runtime.Caller(0)
-		// get base path
-		path := filepath.Dir(filepath.Dir(filepath.Dir(b)))
-		file, err = os.ReadFile(filepath.Join(path, "./config/", name+".toml"))
+	exePath, exeErr := os.Executable()
+	if exeErr == nil {
+		exeDir := filepath.Dir(exePath)
+		candidates = append(candidates, filepath.Join(exeDir, filename), filepath.Join(exeDir, "config", filename))
 	}
 
-	if err != nil {
-		return &Config{}, err
+	if wd, wdErr := os.Getwd(); wdErr == nil {
+		candidates = append(candidates, filepath.Join(wd, filename), filepath.Join(wd, "config", filename))
 	}
 
-	err = toml.Unmarshal(file, &contents)
+	var readErr error
+	for _, p := range candidates {
+		p = filepath.Clean(p)
+		file, e := os.ReadFile(p)
+		if e != nil {
+			readErr = e
+			continue
+		}
 
-	return
+		err = toml.Unmarshal(file, &contents)
+		if err != nil {
+			fmt.Printf("❌ CRITICAL: Gagal parse config di lokasi: %s. Error: %v\n", p, err)
+			return nil, err
+		}
+
+		return contents, nil
+	}
+
+	fmt.Printf("❌ CRITICAL: Gagal baca config. Mencoba lokasi: %v. Last error: %v\n", candidates, readErr)
+	if readErr == nil {
+		readErr = fmt.Errorf("config file not found in candidates: %v", candidates)
+	}
+
+	return nil, readErr
 }
 
 // NewConfig initialize config
 func NewConfig() *Config {
 	config, err := ParseConfig("config")
-	if err != nil && !fiber.IsChild() {
-		// panic if config is not found
-		log.Panic().Err(err).Msg("config not found")
+	if err != nil {
+		if !fiber.IsChild() {
+			log.Panic().Err(err).Msg("config not found")
+		} else {
+			log.Error().Err(err).Msg("child process failed to load config")
+		}
 	}
 
 	return config

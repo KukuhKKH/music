@@ -1,3 +1,5 @@
+import { toast } from 'vue-sonner'
+
 export interface UploadOptions {
   url: string
   file: File
@@ -11,8 +13,6 @@ export interface UploadOptions {
 }
 
 export function useTrackUpload() {
-  const config = useRuntimeConfig()
-
   const uploadTrack = (options: UploadOptions): Promise<any> => {
     return new Promise((resolve, reject) => {
       const formData = new FormData()
@@ -23,6 +23,22 @@ export function useTrackUpload() {
       formData.append('duration', options.metadata.duration.toString())
 
       const xhr = new XMLHttpRequest()
+
+      let slowNetworkToastId: string | number | null = null
+      const slowNetworkTimeout = setTimeout(() => {
+        slowNetworkToastId = toast.warning('Sabar dude, internetmu koyo babi 🐷', {
+          description: 'Upload lagu lagi proses, ojok dicancel yo.',
+          duration: 10000,
+        })
+      }, 15000)
+
+      const cleanup = () => {
+        if (slowNetworkTimeout)
+          clearTimeout(slowNetworkTimeout)
+        if (slowNetworkToastId)
+          toast.dismiss(slowNetworkToastId)
+      }
+
       xhr.open('POST', options.url)
       xhr.withCredentials = true
 
@@ -36,15 +52,23 @@ export function useTrackUpload() {
       }
 
       xhr.onload = () => {
+        cleanup()
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve(xhr.response)
-        } else {
+        }
+        else {
           reject(new Error(`Upload failed with status ${xhr.status}`))
         }
       }
 
-      xhr.onerror = () => reject(new Error('Network error during upload'))
-      xhr.onabort = () => reject(new Error('Upload aborted'))
+      xhr.onerror = () => {
+        cleanup()
+        reject(new Error('Network error during upload'))
+      }
+      xhr.onabort = () => {
+        cleanup()
+        reject(new Error('Upload aborted'))
+      }
 
       xhr.send(formData)
     })

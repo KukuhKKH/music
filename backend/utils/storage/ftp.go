@@ -1,10 +1,12 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
-	"path/filepath"
+	"path"
+	"strings"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -38,57 +40,82 @@ func (s *SftpStorage) connect() (*ssh.Client, *sftp.Client, error) {
 			ssh.Password(s.Password),
 		},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         10 * time.Second,
+		Timeout:         10 * time.Second, // handshake timeout
 	}
 
 	addr := fmt.Sprintf("%s:%d", s.Host, s.Port)
 
 	conn, err := ssh.Dial("tcp", addr, config)
 	if err != nil {
-		log.Printf("Gagal Dial SSH ke %s: %v", addr, err)
+		log.Printf("[sftp] dial ssh %s err=%v", addr, err)
 		return nil, nil, err
 	}
 
 	client, err := sftp.NewClient(conn)
 	if err != nil {
-		conn.Close()
-		log.Printf("Gagal Handshake SFTP: %v", err)
+		_ = conn.Close()
+		log.Printf("[sftp] new client err=%v", err)
 		return nil, nil, err
 	}
 
 	return conn, client, nil
 }
 
-func (s *SftpStorage) Upload(filename string, file io.Reader) (string, error) {
+// Upload sekarang menerima context untuk timeout/cancel
+func (s *SftpStorage) Upload(ctx context.Context, filename string, r io.Reader) (string, error) {
 	sshConn, client, err := s.connect()
 	if err != nil {
 		return "", err
 	}
-
-	defer sshConn.Close()
-	defer client.Close()
+	defer func() { _ = client.Close() }()
+	defer func() { _ = sshConn.Close() }()
 
 	fullPath := filename
 	if s.BaseDir != "" {
-		_ = client.MkdirAll(s.BaseDir)
-		fullPath = filepath.Join(s.BaseDir, filename)
+		fullPath = path.Join(s.BaseDir, filename)
+	}
+
+	dir := path.Dir(fullPath)
+	if dir != "" && dir != "." {
+		if err := client.MkdirAll(dir); err != nil {
+			log.Printf("[sftp] mkdir %s err=%v", dir, err)
+			return "", err
+		}
 	}
 
 	dstFile, err := client.Create(fullPath)
 	if err != nil {
-		log.Printf("Gagal create file %s: %v", fullPath, err)
+		log.Printf("[sftp] create %s err=%v", fullPath, err)
 		return "", err
 	}
+	defer func() { _ = dstFile.Close() }()
 
-	defer dstFile.Close()
-
-	_, err = io.Copy(dstFile, file)
-	if err != nil {
-		log.Printf("Gagal upload data: %v", err)
-		return "", err
+	type copyResult struct {
+		n   int64
+		err error
 	}
+	ch := make(chan copyResult, 1)
 
-	return filename, nil
+	go func() {
+		n, e := io.Copy(dstFile, r)
+		ch <- copyResult{n: n, err: e}
+	}()
+
+	select {
+	case <-ctx.Done():
+		_ = dstFile.Close()
+		_ = client.Close()
+		_ = sshConn.Close()
+		return "", fmt.Errorf("sftp upload canceled/timeout: %w", ctx.Err())
+
+	case res := <-ch:
+		if res.err != nil {
+			log.Printf("[sftp] copy err=%v", res.err)
+			return "", res.err
+		}
+		log.Printf("[sftp] upload ok path=%s bytes=%d", fullPath, res.n)
+		return filename, nil
+	}
 }
 
 func (s *SftpStorage) Delete(filename string) error {
@@ -96,17 +123,18 @@ func (s *SftpStorage) Delete(filename string) error {
 	if err != nil {
 		return err
 	}
-	defer sshConn.Close()
-	defer client.Close()
+	defer func() { _ = client.Close() }()
+	defer func() { _ = sshConn.Close() }()
 
 	fullPath := filename
 	if s.BaseDir != "" {
-		fullPath = filepath.Join(s.BaseDir, filename)
+		fullPath = path.Join(s.BaseDir, filename)
 	}
-
 	return client.Remove(fullPath)
 }
 
 func (s *SftpStorage) GetURL(filename string) string {
-	return fmt.Sprintf("%s/%s/%s", s.PublicUrl, s.BaseDir, filename)
+	fullPath := path.Join(s.BaseDir, filename)
+	relativePath := strings.TrimPrefix(fullPath, "upload/")
+	return fmt.Sprintf("%s/%s", s.PublicUrl, relativePath)
 }
