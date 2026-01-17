@@ -1,8 +1,8 @@
 import tailwindcss from '@tailwindcss/vite'
 // https://nuxt.com/docs/api/configuration/nuxt-config
-const apiProxyPath = process.env.NUXT_API_PROXY_PATH || '/backend'
-const backendUrl = process.env.NUXT_BACKEND_URL || 'http://localhost:8080'
-const devHost = process.env.NUXT_DEV_HOST || 'app-music.local'
+const apiProxyPath = process.env.NUXT_API_PROXY_PATH || 'https://api-music.banglipai.tech'
+const backendUrl = process.env.NUXT_BACKEND_URL || 'https://api-music.banglipai.tech'
+const devHost = process.env.NUXT_DEV_HOST || 'https://music/banglipai.tech'
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
