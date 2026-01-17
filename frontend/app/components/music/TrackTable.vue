@@ -13,8 +13,8 @@ import {
   X,
 } from "lucide-vue-next";
 import { toast } from "vue-sonner";
-import { usePlayerStore } from "~/stores/player";
 import type { MusicMeta, Track } from "~/types/music";
+import { usePlayerStore } from "~/stores/player";
 import { formatDuration, formatFileSize } from "~/lib/format";
 
 const props = defineProps<{
@@ -40,19 +40,17 @@ const player = usePlayerStore();
 const editingId = ref<number | null>(null);
 const editingTitle = ref("");
 
-const config = useRuntimeConfig();
-
 const isAllSelected = computed(
   () =>
     props.tracks.length > 0 &&
     props.tracks.every((t) => props.selectedIds.includes(t.id))
 );
 
-function onCheckboxClick(e: Event, id: number) {
+function onCheckboxClick(_e: Event, id: number) {
   emit("toggleSelect", id);
 }
 
-function onSelectAllClick(e: Event) {
+function onSelectAllClick(_e: Event) {
   emit("toggleSelectAll");
 }
 
@@ -73,15 +71,16 @@ async function saveTitle(track: Track) {
     return;
   }
 
+  const { $api } = useNuxtApp();
+
   try {
-    await $fetch(`${config.public.apiBase}/music/${track.id}`, {
+    await $api(`/music/${track.id}`, {
       method: "PUT",
       body: {
         title: editingTitle.value,
         artist: track.artist,
         album: track.album || "",
       },
-      credentials: "include",
     });
 
     track.title = editingTitle.value;
@@ -287,18 +286,17 @@ async function saveTitle(track: Track) {
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>Confirm Delete</AlertDialogTitle>
-                      <AlertDialogDescription
-                        >Permanently remove "{{
-                          track.title
-                        }}"?</AlertDialogDescription
-                      >
+                      <AlertDialogDescription>
+                        Permanently remove "{{ track.title }}"?
+                      </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
                         class="bg-destructive"
                         @click="emit('deleteTrack', track.id)"
-                        >Delete Now
+                      >
+                        Delete Now
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -315,9 +313,9 @@ async function saveTitle(track: Track) {
       v-if="meta && meta.total_page > 1"
       class="flex items-center justify-between p-4 border-t bg-muted/5"
     >
-      <span class="text-[10px] font-bold uppercase text-muted-foreground"
-        >Found {{ meta.count }} tracks</span
-      >
+      <span class="text-[10px] font-bold uppercase text-muted-foreground">
+        Found {{ meta.count }} tracks
+      </span>
       <div class="flex items-center gap-1">
         <Button
           variant="ghost"
@@ -336,8 +334,9 @@ async function saveTitle(track: Track) {
           class="h-8 w-8 text-[11px] font-bold"
           :class="currentPage === p ? 'bg-primary text-primary-foreground' : ''"
           @click="emit('update:currentPage', p)"
-          >{{ p }}</Button
         >
+          {{ p }}
+        </Button>
         <Button
           variant="ghost"
           size="sm"

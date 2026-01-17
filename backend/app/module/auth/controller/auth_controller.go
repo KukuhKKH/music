@@ -69,7 +69,6 @@ func (_i *authController) Login(c *fiber.Ctx) error {
 	c.Cookie(_i.makeCookie(res.Token, time.Unix(res.ExpiresAt, 0)))
 
 	return response.Resp(c, response.Response{
-		Data:     res,
 		Messages: response.Messages{"Login success"},
 		Code:     fiber.StatusOK,
 	})

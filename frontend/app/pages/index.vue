@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { parseSizeToBytes } from "~/lib/format";
 
-const config = useRuntimeConfig();
+const { $api } = useNuxtApp();
 const {
   data: summary,
   pending,
   error,
   refresh,
-} = await useFetch<any>(`${config.public.apiBase}/stats/summary`);
+} = await useAsyncData<any>("dashboard-summary", () => $api("/stats/summary"));
 
 // Constants for storage
 const MAX_STORAGE_BYTES = 10 * 1024 * 1024 * 1024; // 10GB

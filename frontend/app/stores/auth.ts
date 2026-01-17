@@ -1,44 +1,21 @@
 import { defineStore } from 'pinia'
 
 export const useAuthStore = defineStore('auth', () => {
-  const config = useRuntimeConfig()
-  const token = useCookie('auth_token', {
-    path: '/',
-    watch: true,
-    maxAge: 3600 * 24 * 7, // 7 days default
-  })
-
+  const { $api } = useNuxtApp()
   const user = ref<any>(null)
   const isLoading = ref(false)
 
   const fetchUser = async () => {
-    if (!token.value)
-      return
-
     isLoading.value = true
     try {
-      const { data, error } = await useFetch<any>(`${config.public.apiBase}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token.value}`,
-        },
-      })
+      const response = await $api<any>('/auth/me')
 
-      if (error.value) {
-        user.value = null
-        if (error.value.statusCode === 401) {
-          token.value = null
-        }
-        return
-      }
-
-      if (data.value && data.value.data) {
-        user.value = data.value.data
+      if (response && response.data) {
+        user.value = response.data
       }
     }
-    catch (err) {
-      console.error('Failed to fetch user:', err)
+    catch {
       user.value = null
-      token.value = null
     }
     finally {
       isLoading.value = false
@@ -46,13 +23,19 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const login = async (credentials: { email: string, password: string }) => {
-    const { data, error } = await useFetch<any>(`${config.public.apiBase}/auth/login`, {
-      method: 'POST',
-      body: credentials,
-    })
+    try {
+      const response = await $api<any>('/auth/login', {
+        method: 'POST',
+        body: credentials,
+      })
 
-    if (error.value) {
-      const messages = error.value.data?.messages
+      if (response) {
+        await fetchUser()
+        return response.data || true
+      }
+    }
+    catch (error: any) {
+      const messages = error.data?.messages
       let errorMessage = 'Login failed'
 
       if (Array.isArray(messages)) {
@@ -70,38 +53,26 @@ export const useAuthStore = defineStore('auth', () => {
 
       throw new Error(errorMessage)
     }
-
-    if (data.value && data.value.data) {
-      token.value = data.value.data.token
-      await fetchUser()
-      return data.value.data
-    }
   }
 
   const logout = async () => {
-    // If you want to notify backend about logout
     try {
-      await useFetch(`${config.public.apiBase}/auth/logout`, {
+      await $api('/auth/logout', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token.value}`,
-        },
       })
     }
     catch {
       // ignore
     }
 
-    token.value = null
     user.value = null
     navigateTo('/login')
   }
 
-  const isLoggedIn = computed(() => !!token.value)
+  const isLoggedIn = computed(() => !!user.value)
 
   return {
     user,
-    token,
     isLoading,
     isLoggedIn,
     fetchUser,

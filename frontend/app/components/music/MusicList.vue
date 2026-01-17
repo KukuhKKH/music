@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { useDebounceFn } from "@vueuse/core";
-import { Music, Search, Trash2, X, AlertTriangle } from "lucide-vue-next";
+import { Music, Search, Trash2, X } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 import type { MusicMeta, MusicResponse, Track } from "~/types/music";
 
-const config = useRuntimeConfig();
+const { $api } = useNuxtApp();
 
 const tracks = ref<Track[]>([]);
 const meta = ref<MusicMeta | null>(null);
@@ -19,16 +19,13 @@ const selectedCount = computed(() => selectedIds.value.length);
 async function fetchTracks() {
   isLoading.value = true;
   try {
-    const response = await $fetch<MusicResponse>(
-      `${config.public.apiBase}/music`,
-      {
-        query: {
-          page: currentPage.value,
-          search: searchQuery.value,
-          limit: 10,
-        },
-      }
-    );
+    const response = await $api<MusicResponse>("/music", {
+      query: {
+        page: currentPage.value,
+        search: searchQuery.value,
+        limit: 10,
+      },
+    });
 
     if (response) {
       tracks.value = response.data || [];
@@ -92,7 +89,7 @@ async function bulkDelete() {
 
   try {
     for (const id of ids) {
-      await $fetch(`${config.public.apiBase}/music/${id}`, {
+      await $api(`/music/${id}`, {
         method: "DELETE",
       });
     }
@@ -110,12 +107,14 @@ async function bulkDelete() {
 
 async function deleteTrack(id: number) {
   try {
-    await $fetch(`${config.public.apiBase}/music/${id}`, { method: "DELETE" });
+    await $api(`/music/${id}`, {
+      method: "DELETE",
+    });
     tracks.value = tracks.value.filter((t) => t.id !== id);
     selectedIds.value = selectedIds.value.filter((i) => i !== id);
     toast.success("Track deleted");
     fetchTracks();
-  } catch (err) {
+  } catch {
     toast.error("Failed to delete track");
   }
 }
@@ -133,7 +132,7 @@ async function deleteTrack(id: number) {
             <Music class="h-5 w-5" />
           </div>
           <div>
-            <CardTitle class="text-xl">Tracks</CardTitle>
+            <CardTitle class="text-xl"> Tracks </CardTitle>
             <CardDescription>Library Management</CardDescription>
           </div>
         </div>
@@ -211,8 +210,8 @@ async function deleteTrack(id: number) {
         :is-loading="isLoading"
         :meta="meta"
         :selected-ids="selectedIds"
-        @update:search-query="(val) => (searchQuery = val)"
-        @update:current-page="(val) => (currentPage = val)"
+        @update:search-query="(val: string) => (searchQuery = val)"
+        @update:current-page="(val: number) => (currentPage = val)"
         @toggle-select-all="toggleSelectAll"
         @toggle-select="toggleSelect"
         @delete-track="deleteTrack"
