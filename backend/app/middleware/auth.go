@@ -5,18 +5,48 @@ import (
 
 	"git.dev.siap.id/kukuhkkh/app-music/utils/config"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/session"
 	jwtware "github.com/gofiber/jwt/v2"
 	"github.com/golang-jwt/jwt/v4"
 )
 
 // package-level config pointer; set once at startup via SetConfig to avoid repeated parsing
 var cfg *config.Config
+var store *session.Store
 
 // SetConfig sets the package-level configuration pointer.
-func SetConfig(c *config.Config) {
+func SetConfig(c *config.Config, s *session.Store) {
 	cfg = c
+	store = s
 }
 
+// RequireAuth is a middleware for session-based authentication
+func RequireAuth() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		if store == nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Session store not initialized",
+			})
+		}
+
+		sess, err := store.Get(c)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Unauthorized",
+			})
+		}
+
+		if sess.Get("user_id") == nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"error": "Unauthorized",
+			})
+		}
+
+		return c.Next()
+	}
+}
+
+// Protected is kept for backward compatibility (JWT)
 func Protected() fiber.Handler {
 	conf := cfg
 	if conf == nil {

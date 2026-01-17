@@ -45,10 +45,10 @@ func (_i *TrackRouter) RegisterTrackRoutes() {
 
 	// define routes
 	_i.App.Route("/music", func(router fiber.Router) {
-		router.Get("", middleware.Protected(), trackController.GetTracks)
-		router.Get("/:id", middleware.Protected(), trackController.GetTrackByID)
-		router.Put("/:id", middleware.Protected(), trackController.Update)
-		router.Delete("/:id", middleware.Protected(), trackController.Delete)
-		router.Post("", middleware.Protected(), trackController.Create)
+		router.Get("", middleware.RequireAuth(), trackController.GetTracks)
+		router.Get("/:id", middleware.RequireAuth(), trackController.GetTrackByID)
+		router.Put("/:id", middleware.RequireAuth(), trackController.Update)
+		router.Delete("/:id", middleware.RequireAuth(), trackController.Delete)
+		router.Post("", middleware.RequireAuth(), trackController.Create)
 	})
 }

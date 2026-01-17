@@ -18,6 +18,7 @@ import (
 type app = struct {
 	Name        string        `toml:"name"`
 	Port        string        `toml:"port"`
+	FrontendUrl string        `toml:"frontend_url"`
 	PrintRoutes bool          `toml:"print-routes"`
 	Prefork     bool          `toml:"prefork"`
 	Production  bool          `toml:"production"`
@@ -89,6 +90,11 @@ type middleware = struct {
 		AllowOrigins string `toml:"allow_origins"`
 		AllowHeaders string `toml:"allow_headers"`
 	}
+
+	Session struct {
+		Enable bool   `toml:"enable"`
+		Name   string `toml:"name"`
+	}
 }
 
 type cookie struct {
@@ -124,6 +130,16 @@ type storage = struct {
 	} `toml:"s3"`
 }
 
+type Sso struct {
+	Logto struct {
+		Endpoint              string `toml:"endpoint"`
+		ClientId              string `toml:"client_id"`
+		ClientSecret          string `toml:"client_secret"`
+		PostLogoutRedirectUri string `toml:"post_logout_redirect_uri"`
+		CallbackUrl           string `toml:"callback_url"`
+	} `toml:"logto"`
+}
+
 type Config struct {
 	App        app
 	DB         db
@@ -131,6 +147,7 @@ type Config struct {
 	Middleware middleware
 	Cookie     cookie
 	Storage    storage
+	Sso        Sso
 }
 
 // ParseConfig func to parse config

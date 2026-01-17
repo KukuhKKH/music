@@ -14,6 +14,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/gofiber/fiber/v2/middleware/session"
 )
 
 // Middleware is a struct that contains all the middleware functions
@@ -22,8 +23,8 @@ type Middleware struct {
 	Cfg *config.Config
 }
 
-func NewMiddleware(app *fiber.App, cfg *config.Config) *Middleware {
-	SetConfig(cfg)
+func NewMiddleware(app *fiber.App, cfg *config.Config, sessStore *session.Store) *Middleware {
+	SetConfig(cfg, sessStore)
 
 	return &Middleware{
 		App: app,

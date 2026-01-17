@@ -45,9 +45,9 @@ func (_i *AuthRouter) RegisterAuthRoutes() {
 
 	// define routes
 	_i.App.Route("/auth", func(router fiber.Router) {
-		router.Post("/login", authController.Login)
-		router.Post("/register", authController.Register)
-		router.Get("/me", middleware.Protected(), authController.Me)
-		router.Post("/logout", authController.Logout)
+		router.Get("/login", authController.Login)
+		router.Get("/callback", authController.Callback)
+		router.Get("/me", middleware.RequireAuth(), authController.Me)
+		router.Post("/logout", middleware.RequireAuth(), authController.Logout)
 	})
 }

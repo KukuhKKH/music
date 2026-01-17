@@ -14,8 +14,10 @@ type userRepository struct {
 type UserRepository interface {
 	FindUserByID(id uint64) (user *schema.User, err error)
 	FindUserByEmail(email string) (user *schema.User, err error)
+	FindUserByLogtoSub(sub string) (user *schema.User, err error)
 	CheckUserByEmail(email string) (user *schema.User)
 	CreateUser(user *schema.User) (res *schema.User, err error)
+	UpdateUser(user *schema.User) error
 }
 
 func NewUserRepository(db *database.Database) UserRepository {
@@ -38,17 +40,31 @@ func (_i *userRepository) FindUserByEmail(email string) (user *schema.User, err 
 	return
 }
 
+func (_i *userRepository) FindUserByLogtoSub(sub string) (user *schema.User, err error) {
+	if err := _i.DB.DB.Where("logto_sub = ?", sub).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return
+}
+
 func (_i *userRepository) CheckUserByEmail(email string) (user *schema.User) {
 	_ = _i.DB.DB.Where("email = ?", email).First(&user).Error
 	return
 }
 
 func (_i *userRepository) CreateUser(user *schema.User) (res *schema.User, err error) {
-	user.Password = helpers.Hash([]byte(user.Password))
+	if user.Password != nil {
+		hashed := helpers.Hash([]byte(*user.Password))
+		user.Password = &hashed
+	}
 
 	if err := _i.DB.DB.Create(&user).Error; err != nil {
 		return nil, err
 	}
 
 	return user, nil
+}
+
+func (_i *userRepository) UpdateUser(user *schema.User) error {
+	return _i.DB.DB.Save(user).Error
 }

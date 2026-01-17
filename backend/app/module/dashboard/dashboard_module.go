@@ -32,5 +32,5 @@ func (_i *DashboardRouter) RegisterDashboardRoutes() {
 	// define controllers
 	dashboardController := _i.Controller.Dashboard
 
-	_i.App.Get("/stats/summary", middleware.Protected(), dashboardController.GetSummary)
+	_i.App.Get("/stats/summary", middleware.RequireAuth(), dashboardController.GetSummary)
 }

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"git.dev.siap.id/kukuhkkh/app-music/app/database/seeds"
 	"git.dev.siap.id/kukuhkkh/app-music/app/middleware"
 	"git.dev.siap.id/kukuhkkh/app-music/app/router"
 	"git.dev.siap.id/kukuhkkh/app-music/internal/bootstrap/database"
@@ -122,7 +121,7 @@ func Start(
 
 				if hasFlag("seed") {
 					log.Info().Msg("🌱 Seed flag detected. Running seeder...")
-					db.SeedModels(seeds.NewUserSeeder(db.DB))
+					db.SeedModels()
 				}
 
 				// Return nil agar FX tahu aplikasi berhasil start

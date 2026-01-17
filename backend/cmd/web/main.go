@@ -12,6 +12,7 @@ import (
 	"git.dev.siap.id/kukuhkkh/app-music/internal/bootstrap"
 	"git.dev.siap.id/kukuhkkh/app-music/internal/bootstrap/database"
 	"git.dev.siap.id/kukuhkkh/app-music/utils/config"
+	"git.dev.siap.id/kukuhkkh/app-music/utils/session"
 	fxzerolog "github.com/efectn/fx-zerolog"
 	_ "go.uber.org/automaxprocs"
 )
@@ -41,6 +42,8 @@ func main() {
 		fx.Provide(bootstrap.NewFiber),
 		// database
 		fx.Provide(database.NewDatabase),
+		// session
+		fx.Provide(session.NewStore),
 		// middleware
 		fx.Provide(middleware.NewMiddleware),
 		// router
